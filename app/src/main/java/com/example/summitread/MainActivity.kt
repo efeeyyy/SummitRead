@@ -1,0 +1,84 @@
+package com.example.summitread
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import com.example.summitread.data.BookRepository
+import com.example.summitread.data.ThemeMode
+import com.example.summitread.data.UserPreferences
+import com.example.summitread.data.db.AppDatabase
+import com.example.summitread.theme.AccentColor
+import com.example.summitread.theme.SummitReadTheme
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.ExistingPeriodicWorkPolicy
+import com.example.summitread.worker.StreakNotificationWorker
+import java.util.concurrent.TimeUnit
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.activity.result.contract.ActivityResultContracts
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val db = AppDatabase.getInstance(applicationContext)
+        val bookRepository = BookRepository(db.bookDao())
+        val userPreferences = UserPreferences(applicationContext)
+
+        val requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            // Permission granted or rejected
+        }
+        
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        val streakWorkRequest = PeriodicWorkRequestBuilder<StreakNotificationWorker>(1, TimeUnit.DAYS)
+            .build()
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "StreakNotificationWork",
+            ExistingPeriodicWorkPolicy.KEEP,
+            streakWorkRequest
+        )
+
+        enableEdgeToEdge()
+        setContent {
+            val themeMode by userPreferences.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
+            val accentColorIndex by userPreferences.accentColorIndex.collectAsState(initial = 0)
+            val accentColor = AccentColor.entries.getOrNull(accentColorIndex) ?: AccentColor.FOREST_GREEN
+
+            SummitReadTheme(
+                themeMode = themeMode,
+                accentColor = accentColor
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    SummitReadApp(
+                        bookRepository = bookRepository,
+                        userPreferences = userPreferences,
+                        context = applicationContext
+                    )
+                }
+            }
+        }
+    }
+}

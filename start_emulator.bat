@@ -1,0 +1,3 @@
+@echo off
+echo Starting Android Emulator with Cold Boot and GPU Host settings...
+"C:\Users\Efe\AppData\Local\Android\Sdk\emulator\emulator.exe" -avd medium_phone -no-snapshot-load -gpu host
