@@ -1,12 +1,10 @@
 package com.example.summitread.ui.home
 
-import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,14 +12,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Numbers
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -32,36 +33,54 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.example.summitread.R
 import com.example.summitread.data.ImageStorage
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import com.example.summitread.theme.AccentColor
-import java.io.File
+import kotlinx.coroutines.launch
 
 @Composable
 fun AddBookDialog(
     onDismissRequest: () -> Unit,
-    onSave: (title: String, author: String, totalPages: Int, coverImagePath: String?, accentColorIndex: Int) -> Unit
+    onSave: (
+        title: String,
+        author: String,
+        totalPages: Int,
+        coverImagePath: String?,
+        accentColorIndex: Int,
+        coverColorArgb: Int?
+    ) -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var author by remember { mutableStateOf("") }
-    var totalPages by remember { mutableStateOf("") }
-    var coverImagePath by remember { mutableStateOf<String?>(null) }
-    var selectedColorIndex by remember { mutableStateOf(0) }
+    // Draft state survives rotation and process death (rememberSaveable).
+    var title by rememberSaveable { mutableStateOf("") }
+    var author by rememberSaveable { mutableStateOf("") }
+    var totalPages by rememberSaveable { mutableStateOf("") }
+    var coverImagePath by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedColorIndex by rememberSaveable { mutableIntStateOf(0) }
+    // True once the wheel was used: then the exact colour is stored in coverColorArgb. Presets store only the index.
+    var useCustomColor by rememberSaveable { mutableStateOf(false) }
+    val initialHsv = remember { AccentColor.entries[0].lightPrimary.toHsv() }
+    var hue by rememberSaveable { mutableFloatStateOf(initialHsv.hue) }
+    var saturation by rememberSaveable { mutableFloatStateOf(initialHsv.saturation) }
+    var brightness by rememberSaveable { mutableFloatStateOf(initialHsv.value) }
+    val hsv = Hsv(hue, saturation, brightness)
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -71,17 +90,33 @@ fun AddBookDialog(
     ) { uri ->
         if (uri != null) {
             scope.launch {
-                coverImagePath = ImageStorage.copyImageToInternalStorage(context, uri, "cover")
+                val copied = ImageStorage.copyImageToInternalStorage(context, uri, "cover")
+                if (copied != null) {
+                    ImageStorage.delete(coverImagePath) // replaced selection: drop the earlier copy
+                    coverImagePath = copied
+                }
             }
         }
     }
 
+    val pickedColor = if (useCustomColor) hsv.toColor() else AccentColor.entries[selectedColorIndex].lightPrimary
+
+    fun dismiss() {
+        ImageStorage.delete(coverImagePath) // not saved: do not leave the copied cover behind
+        onDismissRequest()
+    }
+
+    val pages = totalPages.toIntOrNull() ?: 0
+    val canSave = title.isNotBlank() && author.isNotBlank() && pages > 0
+
     AlertDialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = ::dismiss,
         title = { Text(stringResource(R.string.add_book)) },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
@@ -92,7 +127,7 @@ fun AddBookDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 OutlinedTextField(
                     value = author,
                     onValueChange = { author = it },
@@ -101,21 +136,21 @@ fun AddBookDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 OutlinedTextField(
                     value = totalPages,
-                    onValueChange = { totalPages = it.filter { char -> char.isDigit() } },
+                    onValueChange = { totalPages = it.filter { char -> char.isDigit() }.take(6) },
                     label = { Text(stringResource(R.string.total_pages)) },
-                    leadingIcon = { Icon(Icons.Default.Numbers, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Default.Description, contentDescription = null) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-                
+                Spacer(modifier = Modifier.height(4.dp))
+
                 Button(
-                    onClick = { 
+                    onClick = {
                         photoPickerLauncher.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )
@@ -125,66 +160,99 @@ fun AddBookDialog(
                     Text(stringResource(R.string.select_cover))
                 }
 
-                if (coverImagePath != null) {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        AsyncImage(
-                            model = File(coverImagePath!!).toURI().toString(),
-                            contentDescription = "Cover preview",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(100.dp, 150.dp)
-                                .clip(MaterialTheme.shapes.small)
-                        )
-                    }
+                // Cover preview: the selected image, or the vector cover in the picked colour. Rounded corners.
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CoverImage(
+                        path = coverImagePath,
+                        contentDescription = if (coverImagePath != null) "Cover preview" else "Colour preview",
+                        modifier = Modifier
+                            .size(100.dp, 150.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
+                        fallback = { VectorCover(base = pickedColor) }
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(stringResource(R.string.accent_color), style = MaterialTheme.typography.labelMedium)
+
+                // Quick presets (the original palette) ...
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     AccentColor.entries.forEachIndexed { index, color ->
+                        val selected = !useCustomColor && selectedColorIndex == index
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
                                 .background(color.lightPrimary)
-                                .clickable { selectedColorIndex = index }
+                                .selectable(
+                                    selected = selected,
+                                    role = Role.RadioButton,
+                                    onClick = {
+                                        selectedColorIndex = index
+                                        useCustomColor = false
+                                        val preset = color.lightPrimary.toHsv()
+                                        hue = preset.hue
+                                        saturation = preset.saturation
+                                        brightness = preset.value
+                                    }
+                                )
+                                .semantics { contentDescription = "${color.displayName} colour" }
                                 .border(
-                                    width = if (selectedColorIndex == index) 3.dp else 0.dp,
-                                    color = if (selectedColorIndex == index) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                                    width = if (selected) 3.dp else 0.dp,
+                                    color = if (selected) MaterialTheme.colorScheme.onSurface else androidx.compose.ui.graphics.Color.Transparent,
                                     shape = CircleShape
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (selectedColorIndex == index) {
+                            if (selected) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
+                                    contentDescription = null,
                                     tint = color.lightOnPrimary
                                 )
                             }
                         }
                     }
                 }
+
+                // ... and the full colour wheel for any other colour.
+                ColorWheelPicker(
+                    hsv = hsv,
+                    onChange = {
+                        useCustomColor = true
+                        hue = it.hue
+                        saturation = it.saturation
+                        brightness = it.value
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val pages = totalPages.toIntOrNull() ?: 0
-                    if (title.isNotBlank() && author.isNotBlank() && pages > 0) {
-                        onSave(title, author, pages, coverImagePath, selectedColorIndex)
+                    if (canSave) {
+                        onSave(
+                            title.trim(),
+                            author.trim(),
+                            pages,
+                            coverImagePath,
+                            selectedColorIndex,
+                            if (useCustomColor) hsv.toColor().toArgb() else null
+                        )
                     }
                 },
-                enabled = title.isNotBlank() && author.isNotBlank() && totalPages.toIntOrNull() != null && (totalPages.toIntOrNull() ?: 0) > 0
+                enabled = canSave
             ) {
                 Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismissRequest) {
+            TextButton(onClick = ::dismiss) {
                 Text(stringResource(R.string.cancel))
             }
         }
