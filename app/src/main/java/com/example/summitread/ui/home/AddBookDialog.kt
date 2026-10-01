@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.summitread.R
 import com.example.summitread.data.ImageStorage
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.example.summitread.theme.AccentColor
 import java.io.File
 
@@ -62,12 +64,15 @@ fun AddBookDialog(
     var selectedColorIndex by remember { mutableStateOf(0) }
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            coverImagePath = ImageStorage.copyImageToInternalStorage(context, uri, "cover")
+            scope.launch {
+                coverImagePath = ImageStorage.copyImageToInternalStorage(context, uri, "cover")
+            }
         }
     }
 

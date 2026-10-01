@@ -38,7 +38,6 @@ import com.example.summitread.R
 import com.example.summitread.data.BookRepository
 import com.example.summitread.data.UserPreferences
 import com.example.summitread.theme.AccentColor
-import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.IconButton
@@ -88,7 +87,7 @@ fun MountainScreen(
     val showSummitAnimation by viewModel.showSummitAnimation.collectAsStateWithLifecycle()
     val pagesInput by viewModel.pagesInput.collectAsStateWithLifecycle()
     val hoursSinceLastSession by viewModel.hoursSinceLastSession.collectAsStateWithLifecycle()
-    val currentStreak by userPreferences.currentStreak.collectAsStateWithLifecycle(initialValue = 0)
+    val currentStreak by viewModel.currentStreak.collectAsStateWithLifecycle()
 
     var showSummitLogbook by remember { mutableStateOf(false) }
     var particleTrigger by remember { mutableStateOf(false) }
@@ -107,8 +106,6 @@ fun MountainScreen(
             particleTrigger = true
         }
     }
-    
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
     
     // Update parent about focus mode change
     androidx.compose.runtime.LaunchedEffect(isFocusMode) {
@@ -226,12 +223,7 @@ fun MountainScreen(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 item {
-                                    StopwatchWidget(
-                                        bookId = book.id,
-                                        onStopSession = { pagesEstimate, _ ->
-                                            viewModel.setPagesInput(pagesEstimate.toString())
-                                        }
-                                    )
+                                    StopwatchWidget(bookId = book.id)
                                 }
                                 
                                 item {
@@ -239,11 +231,7 @@ fun MountainScreen(
                                         selectedDate = selectedDate,
                                         pagesInput = pagesInput,
                                         onPagesInputChange = viewModel::setPagesInput,
-                                        onLogPages = {
-                                            scope.launch {
-                                                viewModel.logPages()
-                                            }
-                                        },
+                                        onLogPages = viewModel::logPages,
                                         currentPages = book.currentPages,
                                         totalPages = book.totalPages,
                                         modifier = Modifier.onGloballyPositioned { coordinates ->
@@ -273,26 +261,10 @@ fun MountainScreen(
                             book = book,
                             notes = notes,
                             characters = characters,
-                            onAddNote = { content, page, photo -> 
-                                            scope.launch {
-                                                viewModel.addNote(content, page, photo)
-                                            }
-                                        },
-                                        onDeleteNote = { note ->
-                                            scope.launch {
-                                                viewModel.deleteNote(note)
-                                            }
-                                        },
-                                        onAddCharacter = { name, role, desc ->
-                                            scope.launch {
-                                                viewModel.addCharacter(name, role, desc)
-                                            }
-                                        },
-                                        onDeleteCharacter = { character ->
-                                            scope.launch {
-                                                viewModel.deleteCharacter(character)
-                                            }
-                                        },
+                            onAddNote = viewModel::addNote,
+                            onDeleteNote = viewModel::deleteNote,
+                            onAddCharacter = viewModel::addCharacter,
+                            onDeleteCharacter = viewModel::deleteCharacter,
                             onDismiss = viewModel::toggleFocusMode,
                             modifier = Modifier.weight(1f)
                         )
@@ -313,10 +285,8 @@ fun MountainScreen(
                     SummitLogbookDialog(
                         bookTitle = book.title,
                         onSave = { rating, review ->
-                            scope.launch {
-                                viewModel.saveSummitLogbook(rating, review)
-                                showSummitLogbook = false
-                            }
+                            viewModel.saveSummitLogbook(rating, review)
+                            showSummitLogbook = false
                         },
                         onDismissRequest = { showSummitLogbook = false }
                     )

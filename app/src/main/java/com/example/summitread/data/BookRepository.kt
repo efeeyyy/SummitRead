@@ -3,18 +3,29 @@ package com.example.summitread.data
 import com.example.summitread.data.db.BookDao
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.data.db.CharacterEntity
+import com.example.summitread.data.db.LogPagesResult
 import com.example.summitread.data.db.NoteEntity
 import com.example.summitread.data.db.ReadingSessionEntity
 import com.example.summitread.data.db.RelicEntity
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import java.time.LocalDate
+import java.time.ZoneId
 
 class BookRepository(private val dao: BookDao) {
 
     // ── Books ──────────────────────────────────────────────
 
+    /** Shelf/list books; archived books are excluded. */
     val allBooks: Flow<List<BookEntity>> = dao.getAllBooks()
 
+    val archivedBooks: Flow<List<BookEntity>> = dao.getArchivedBooks()
+
+    /** Emits the book even when it is archived. */
     fun getBookById(id: Long): Flow<BookEntity?> = dao.getBookById(id)
 
     suspend fun addBook(
@@ -22,14 +33,16 @@ class BookRepository(private val dao: BookDao) {
         author: String,
         totalPages: Int,
         coverImagePath: String? = null,
-        accentColorIndex: Int = 0
+        accentColorIndex: Int = 0,
+        coverColorArgb: Int? = null
     ): Long {
         val book = BookEntity(
             title = title,
             author = author,
             totalPages = totalPages,
             coverImagePath = coverImagePath,
-            accentColorIndex = accentColorIndex
+            accentColorIndex = accentColorIndex,
+            coverColorArgb = coverColorArgb
         )
         return dao.insertBook(book)
     }
@@ -38,8 +51,20 @@ class BookRepository(private val dao: BookDao) {
         dao.updateBook(book)
     }
 
+    /** Archive hides the book from the shelf/list; sessions, notes and relics are kept. */
+    suspend fun archiveBook(id: Long, archived: Boolean) {
+        dao.setArchived(id, archived)
+    }
+
+    /** Persists the manual order (index in [orderedIds]) in a single transaction. */
+    suspend fun reorderBooks(orderedIds: List<Long>) {
+        dao.setDisplayOrders(orderedIds)
+    }
+
+    /** Hard delete: removes the book with its sessions, notes, characters, relic and image files. */
     suspend fun deleteBook(book: BookEntity) {
-        dao.deleteBook(book)
+        val files = dao.deleteBookCascade(book.id)
+        ImageStorage.deleteAll(files)
     }
 
     // ── Reading Sessions ──────────────────────────────────
@@ -47,62 +72,31 @@ class BookRepository(private val dao: BookDao) {
     fun getSessionsForBook(bookId: Long): Flow<List<ReadingSessionEntity>> =
         dao.getSessionsForBook(bookId)
 
-    fun getSessionsByBookAndDate(bookId: Long, date: Long): Flow<List<ReadingSessionEntity>> =
-        dao.getSessionsByBookAndDate(bookId, date)
-
-    fun getAllSessionsForBook(bookId: Long): Flow<List<ReadingSessionEntity>> =
-        dao.getAllSessionsForBook(bookId)
-
     /**
-     * Logs pages read for a book session.
-     * Updates the book's currentPages to the sum of all sessions.
-     * If the book reaches its totalPages, marks it as completed and inserts a Relic.
+     * Logs pages read for a book in ONE transaction: clamps to the remaining pages, inserts the session
+     * (with its stopwatch time), links same-day notes, updates progress / completion / lastActivity and
+     * creates the relic exactly once when the book reaches 100%.
      *
-     * @return true if the book was just completed by this session.
+     * @param date any instant inside the day to log for (normalised to the start of that day).
+     * @return null if nothing was logged (future date, unknown book, book already complete, pages <= 0).
      */
-    suspend fun logPages(bookId: Long, date: Long, pagesRead: Int, timeSpentMillis: Long = 0L): Boolean {
-        // Insert the reading session
-        val sessionId = dao.insertSession(
-            ReadingSessionEntity(
-                bookId = bookId,
-                date = date,
-                pagesRead = pagesRead,
-                timeSpentMillis = timeSpentMillis
-            )
+    suspend fun logPages(
+        bookId: Long,
+        date: Long,
+        pagesRead: Int,
+        timeSpentMillis: Long = 0L
+    ): LogPagesResult? {
+        val zone = ZoneId.systemDefault()
+        val day = StreakCalculator.toLocalDate(date, zone)
+        if (day.isAfter(LocalDate.now(zone))) return null // no logging for future days
+        return dao.logPagesTransaction(
+            bookId = bookId,
+            date = StreakCalculator.startOfDayMillis(day, zone),
+            dayEnd = StreakCalculator.startOfDayMillis(day.plusDays(1), zone),
+            pagesRequested = pagesRead,
+            timeSpentMillis = timeSpentMillis,
+            nowMillis = System.currentTimeMillis()
         )
-
-        // Link any loose notes added during this session
-        dao.linkLooseNotesToSession(bookId, sessionId)
-
-        // Calculate total pages read across all sessions for this book
-        val allSessions = dao.getAllSessionsForBook(bookId).first()
-        val totalRead = allSessions.sumOf { it.pagesRead }
-
-        // Get the current book
-        val book = dao.getBookById(bookId).first() ?: return false
-        val wasAlreadyCompleted = book.isCompleted
-        val isNowCompleted = totalRead >= book.totalPages
-
-        // Update the book
-        dao.updateBook(
-            book.copy(
-                currentPages = totalRead.coerceAtMost(book.totalPages),
-                isCompleted = isNowCompleted
-            )
-        )
-
-        // If just completed, insert a relic
-        if (isNowCompleted && !wasAlreadyCompleted) {
-            dao.insertRelic(
-                RelicEntity(
-                    bookId = bookId,
-                    title = book.title
-                )
-            )
-            return true
-        }
-
-        return false
     }
 
     // ── Notes ─────────────────────────────────────────────
@@ -110,12 +104,21 @@ class BookRepository(private val dao: BookDao) {
     fun getNotesForBook(bookId: Long): Flow<List<NoteEntity>> =
         dao.getNotesForBook(bookId)
 
-    suspend fun insertNote(note: NoteEntity) {
-        dao.insertNote(note)
+    /** Creates a note; it is linked at creation to the book's latest session of today (if any). */
+    suspend fun addNote(bookId: Long, pageNumber: Int, content: String, photoPath: String?): Long {
+        val zone = ZoneId.systemDefault()
+        val today = LocalDate.now(zone)
+        return dao.insertNoteLinked(
+            NoteEntity(bookId = bookId, pageNumber = pageNumber, content = content, photoPath = photoPath),
+            dayStart = StreakCalculator.startOfDayMillis(today, zone),
+            dayEnd = StreakCalculator.startOfDayMillis(today.plusDays(1), zone)
+        )
     }
 
+    /** Deletes the note and its photo file. */
     suspend fun deleteNote(note: NoteEntity) {
         dao.deleteNote(note)
+        ImageStorage.deleteAll(listOf(note.photoPath))
     }
 
     // ── Characters ────────────────────────────────────────
@@ -135,23 +138,56 @@ class BookRepository(private val dao: BookDao) {
 
     val allRelics: Flow<List<RelicEntity>> = dao.getAllRelics()
 
-    suspend fun insertRelic(relic: RelicEntity) {
-        dao.insertRelic(relic)
+    suspend fun getRelicByBookId(bookId: Long): RelicEntity? = dao.getRelicByBookId(bookId)
+
+    suspend fun updateRelicLogbook(bookId: Long, rating: Float, review: String) {
+        dao.updateRelicLogbook(bookId, rating, review)
     }
 
-    suspend fun getRelicByBookId(bookId: Long): RelicEntity? {
-        return dao.getRelicByBookId(bookId)
-    }
+    // ── Streak (derived from logged days, never stored) ──────
 
-    suspend fun updateRelic(relic: RelicEntity) {
-        dao.updateRelic(relic)
-    }
+    /** Distinct calendar days with at least one logged session (any book). */
+    val loggedDays: Flow<Set<LocalDate>> = dao.getLoggedDays()
+        .map { days -> days.mapTo(HashSet()) { StreakCalculator.toLocalDate(it) } }
+
+    suspend fun getLoggedDaysOnce(): Set<LocalDate> =
+        dao.getLoggedDaysOnce().mapTo(HashSet()) { StreakCalculator.toLocalDate(it) }
+
+    /**
+     * Current streak in calendar days. Follows the clock: it flips to 0 by itself once a whole day
+     * has been missed, even if the screen stays open across midnight.
+     */
+    val currentStreak: Flow<Int> =
+        combine(loggedDays, DayClock.today()) { days, today ->
+            StreakCalculator.currentStreak(days, today)
+        }.distinctUntilChanged()
+
+    /** Wall-clock moment of the last logged session (any book), null if nothing was ever logged. */
+    val lastSessionLoggedAtMillis: Flow<Long?> = dao.getLastSessionLoggedAt()
 
     // ── Aggregate ─────────────────────────────────────────
 
+    /** Completed books of all time (archived books included): drives the avatar tier. */
     val completedBooksCount: Flow<Int> = dao.getCompletedBooksCount()
+
+    /** Books completed in the current calendar year (follows the clock across New Year). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val completedBooksThisYear: Flow<Int> = DayClock.today()
+        .map { it.year }
+        .distinctUntilChanged()
+        .flatMapLatest { year ->
+            val zone = ZoneId.systemDefault()
+            dao.getCompletedBooksBetween(
+                StreakCalculator.startOfDayMillis(LocalDate.of(year, 1, 1), zone),
+                StreakCalculator.startOfDayMillis(LocalDate.of(year + 1, 1, 1), zone)
+            )
+        }
 
     val totalPagesRead: Flow<Int> = dao.getTotalPagesRead()
 
+    /** Sum of the real stopwatch time of all sessions (not the 1.5 min/page estimate). */
     val totalTimeReadMillis: Flow<Long> = dao.getTotalTimeReadMillis()
+
+    /** Real timed reading (sum of timeSpentMillis) of one book, for the Journey sheet. */
+    fun getTotalTimeMillisForBook(bookId: Long): Flow<Long> = dao.getTotalTimeMillisForBook(bookId)
 }

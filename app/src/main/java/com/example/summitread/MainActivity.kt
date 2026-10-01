@@ -16,11 +16,9 @@ import com.example.summitread.data.UserPreferences
 import com.example.summitread.data.db.AppDatabase
 import com.example.summitread.theme.AccentColor
 import com.example.summitread.theme.SummitReadTheme
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.ExistingPeriodicWorkPolicy
-import com.example.summitread.worker.StreakNotificationWorker
-import java.util.concurrent.TimeUnit
+import androidx.lifecycle.lifecycleScope
+import com.example.summitread.notifications.NotificationChannels
+import com.example.summitread.worker.StreakReminderScheduler
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
@@ -50,13 +48,9 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val streakWorkRequest = PeriodicWorkRequestBuilder<StreakNotificationWorker>(1, TimeUnit.DAYS)
-            .build()
-        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
-            "StreakNotificationWork",
-            ExistingPeriodicWorkPolicy.KEEP,
-            streakWorkRequest
-        )
+        NotificationChannels.ensureCreated(applicationContext)
+        // 6h / 1h streak-rescue reminders: rescheduled after every log and when the preference changes.
+        StreakReminderScheduler.observe(lifecycleScope, applicationContext, bookRepository, userPreferences)
 
         enableEdgeToEdge()
         setContent {

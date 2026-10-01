@@ -1,70 +1,102 @@
 package com.example.summitread.worker
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
+import android.annotation.SuppressLint
+import android.app.PendingIntent
 import android.content.Context
-import android.os.Build
+import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.example.summitread.MainActivity
 import com.example.summitread.R
+import com.example.summitread.data.StreakCalculator
 import com.example.summitread.data.UserPreferences
+import com.example.summitread.data.db.AppDatabase
+import com.example.summitread.notifications.NotificationChannels
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZonedDateTime
+import kotlin.math.abs
 
+/**
+ * Fires one "streak is about to reset" notification (scheduled by [StreakReminderScheduler]).
+ * It re-validates everything at fire time, so a stale or late run never shows a wrong reminder.
+ */
 class StreakNotificationWorker(
-    private val context: Context,
+    context: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        val userPreferences = UserPreferences(context)
-        val lastReadMillis = userPreferences.lastReadDate.first()
-        val currentStreak = userPreferences.currentStreak.first()
-        
-        if (currentStreak == 0) return Result.success()
+        val resetAtMillis = inputData.getLong(KEY_RESET_AT_MILLIS, 0L)
+        val hoursBefore = inputData.getInt(KEY_HOURS_BEFORE, 0)
+        // Runs of the legacy daily periodic job carry no input: nothing to do.
+        if (resetAtMillis == 0L || hoursBefore == 0) return Result.success()
 
-        val today = LocalDate.now()
-        
-        val lastReadDate = if (lastReadMillis > 0L) {
-            Instant.ofEpochMilli(lastReadMillis).atZone(ZoneId.systemDefault()).toLocalDate()
-        } else {
-            null
-        }
+        val context = applicationContext
+        if (!UserPreferences(context).notificationsEnabled.first()) return Result.success()
+        if (!NotificationChannels.canPost(context)) return Result.success()
 
-        if (lastReadDate != null && lastReadDate.isBefore(today)) {
-            // Remind the user to keep the streak alive
-            sendNotification(currentStreak)
-        }
+        val days = AppDatabase.getInstance(context).bookDao().getLoggedDaysOnce()
+            .mapTo(HashSet<LocalDate>()) { StreakCalculator.toLocalDate(it) }
+        val now = ZonedDateTime.now()
+        val today = now.toLocalDate()
 
+        val reset = StreakCalculator.resetMoment(days, today, now.zone) ?: return Result.success()
+        val resetMillis = reset.toInstant().toEpochMilli()
+        // The streak moved on (pages were logged since scheduling) or the reset has already passed.
+        if (abs(resetMillis - resetAtMillis) > STALE_TOLERANCE_MILLIS) return Result.success()
+        if (!Instant.now().isBefore(reset.toInstant())) return Result.success()
+
+        val streak = StreakCalculator.currentStreak(days, today)
+        if (streak <= 0) return Result.success()
+
+        show(context, streak, hoursBefore)
         return Result.success()
     }
 
-    private fun sendNotification(streak: Int) {
-        val channelId = "streak_reminder_channel"
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    @SuppressLint("MissingPermission") // permission is verified by NotificationChannels.canPost above
+    private fun show(context: Context, streak: Int, hoursBefore: Int) {
+        NotificationChannels.ensureCreated(context)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                channelId,
-                "Streak Reminders",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Reminders to keep your reading streak alive"
-            }
-            notificationManager.createNotificationChannel(channel)
+        val openApp = PendingIntent.getActivity(
+            context,
+            0,
+            Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val dayWord = if (streak == 1) "day" else "days"
+        val (title, text) = if (hoursBefore <= 1) {
+            "Last chance to save your streak!" to
+                "Only about an hour left. Read a few pages to keep your $streak $dayWord streak alive."
+        } else {
+            "Keep the fire alive!" to
+                "About $hoursBefore hours left to read and keep your $streak $dayWord streak going."
         }
 
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentTitle("Keep the fire alive! 🔥")
-            .setContentText("You have a $streak day streak. Read today to keep it going!")
+        val notification = NotificationCompat.Builder(context, NotificationChannels.STREAK_REMINDERS)
+            .setSmallIcon(R.drawable.ic_stat_summit)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setContentIntent(openApp)
             .setAutoCancel(true)
             .build()
 
-        notificationManager.notify(1001, notification)
+        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_BASE + hoursBefore, notification)
+    }
+
+    companion object {
+        const val KEY_RESET_AT_MILLIS = "reset_at_millis"
+        const val KEY_HOURS_BEFORE = "hours_before"
+        private const val NOTIFICATION_ID_BASE = 1000
+        private const val STALE_TOLERANCE_MILLIS = 60_000L
     }
 }

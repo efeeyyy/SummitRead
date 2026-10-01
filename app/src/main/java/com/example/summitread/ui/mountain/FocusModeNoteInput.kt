@@ -41,6 +41,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.summitread.R
 import com.example.summitread.data.ImageStorage
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.data.db.CharacterEntity
 import com.example.summitread.data.db.NoteEntity
@@ -100,11 +102,14 @@ private fun NotesTab(
     var photoPath by remember { mutableStateOf<String?>(null) }
     
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            photoPath = ImageStorage.copyImageToInternalStorage(context, uri, "note")
+            scope.launch {
+                photoPath = ImageStorage.copyImageToInternalStorage(context, uri, "note")
+            }
         }
     }
 

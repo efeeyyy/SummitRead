@@ -10,9 +10,13 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
 enum class ThemeMode { LIGHT, DARK, SYSTEM }
+
+/** A stopped stopwatch session waiting to be stored with the next page log of [bookId]. */
+data class PendingTimerSession(val bookId: Long, val elapsedMillis: Long)
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
@@ -24,8 +28,9 @@ class UserPreferences(private val context: Context) {
         val USERNAME = stringPreferencesKey("username")
         val ACTIVE_BOOK_ID = longPreferencesKey("active_book_id")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
-        val LAST_READ_DATE = longPreferencesKey("last_read_date")
-        val CURRENT_STREAK = intPreferencesKey("current_streak")
+        val SORT_OPTION = stringPreferencesKey("sort_option")
+        val PENDING_TIMER_BOOK_ID = longPreferencesKey("pending_timer_book_id")
+        val PENDING_TIMER_MILLIS = longPreferencesKey("pending_timer_millis")
         val IS_LIST_VIEW = booleanPreferencesKey("is_list_view")
         val ANNUAL_GOAL = intPreferencesKey("annual_goal")
     }
@@ -95,20 +100,42 @@ class UserPreferences(private val context: Context) {
         }
     }
 
-    // ── Streak ──────────────────────────────────────────
+    // ── Sort Option (Home list) ───────────────────────────
 
-    val lastReadDate: Flow<Long> = context.dataStore.data.map { prefs ->
-        prefs[Keys.LAST_READ_DATE] ?: 0L
+    /** Raw name of the persisted Home sort option; null until the user picks one. */
+    val sortOptionName: Flow<String?> = context.dataStore.data.map { prefs -> prefs[Keys.SORT_OPTION] }
+        .distinctUntilChanged()
+
+    suspend fun setSortOptionName(name: String) {
+        context.dataStore.edit { prefs -> prefs[Keys.SORT_OPTION] = name }
     }
 
-    val currentStreak: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[Keys.CURRENT_STREAK] ?: 0
-    }
+    // ── Pending timer session ─────────────────────────────
 
-    suspend fun updateStreak(date: Long, streak: Int) {
+    /**
+     * Elapsed reading time of a stopped stopwatch that has not been logged yet. Persisted so it survives
+     * the timer service being destroyed (or the screen being closed) before the UI reads it.
+     */
+    val pendingTimerSession: Flow<PendingTimerSession?> = context.dataStore.data.map { prefs ->
+        val bookId = prefs[Keys.PENDING_TIMER_BOOK_ID]
+        val millis = prefs[Keys.PENDING_TIMER_MILLIS]
+        if (bookId != null && millis != null && millis > 0L) PendingTimerSession(bookId, millis) else null
+    }.distinctUntilChanged()
+
+    /** Adds [elapsedMillis] to the pending time of [bookId] (replaces a pending session of another book). */
+    suspend fun addPendingTimerSession(bookId: Long, elapsedMillis: Long) {
         context.dataStore.edit { prefs ->
-            prefs[Keys.LAST_READ_DATE] = date
-            prefs[Keys.CURRENT_STREAK] = streak
+            val sameBook = prefs[Keys.PENDING_TIMER_BOOK_ID] == bookId
+            val existing = if (sameBook) prefs[Keys.PENDING_TIMER_MILLIS] ?: 0L else 0L
+            prefs[Keys.PENDING_TIMER_BOOK_ID] = bookId
+            prefs[Keys.PENDING_TIMER_MILLIS] = existing + elapsedMillis
+        }
+    }
+
+    suspend fun clearPendingTimerSession() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(Keys.PENDING_TIMER_BOOK_ID)
+            prefs.remove(Keys.PENDING_TIMER_MILLIS)
         }
     }
 

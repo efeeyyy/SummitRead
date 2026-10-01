@@ -65,7 +65,7 @@ fun HomeScreen(
     val allBooks by viewModel.allBooks.collectAsStateWithLifecycle()
     val sortOption by viewModel.sortOption.collectAsStateWithLifecycle()
     val isListView by userPreferences.isListView.collectAsStateWithLifecycle(initialValue = false)
-    val currentStreak by userPreferences.currentStreak.collectAsStateWithLifecycle(initialValue = 0)
+    val currentStreak by viewModel.currentStreak.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var showAddDialog by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }

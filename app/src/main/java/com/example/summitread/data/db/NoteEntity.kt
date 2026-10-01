@@ -1,9 +1,13 @@
 package com.example.summitread.data.db
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "notes")
+@Entity(
+    tableName = "notes",
+    indices = [Index(value = ["bookId"])]
+)
 data class NoteEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val bookId: Long,
