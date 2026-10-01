@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.summitread.data.BookRepository
-import com.example.summitread.data.PageMath
 import com.example.summitread.data.ThemeMode
 import com.example.summitread.data.UserPreferences
 import com.example.summitread.data.db.BookEntity
@@ -145,21 +144,6 @@ class ProfileViewModel(
             initializer { ProfileViewModel(repository, preferences) }
         }
 
-        internal fun formatClimbTime(pages: Int): String {
-            val totalMinutes = (pages * PageMath.MINUTES_PER_PAGE).toInt()
-            if (totalMinutes == 0) return "0 Hours Climbed"
-            val days = totalMinutes / (24 * 60)
-            val hours = (totalMinutes % (24 * 60)) / 60
-            val mins = totalMinutes % 60
-
-            return buildString {
-                if (days > 0) append("$days Days, ")
-                if (hours > 0) append("$hours Hours, ")
-                if (mins > 0 && days == 0) append("$mins Mins, ")
-                if (isEmpty()) append("0 Hours, ")
-                setLength(length - 2)
-                append(" Climbed")
-            }
-        }
+        internal fun formatClimbTime(pages: Int): String = ProfileLogic.formatClimbTime(pages)
     }
 }
