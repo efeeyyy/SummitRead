@@ -1,5 +1,6 @@
 package com.example.summitread.ui.mountain
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,17 +45,20 @@ fun PageInputCard(
     onLogPages: () -> Unit,
     currentPages: Int,
     totalPages: Int,
+    isLogging: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val dateFormat = remember { SimpleDateFormat("MMM dd", Locale.getDefault()) }
     val formattedDate = remember(selectedDate) { dateFormat.format(Date(selectedDate)) }
     val progress = if (totalPages > 0) currentPages.toFloat() / totalPages.toFloat() else 0f
+    val contrast = mountainContrast()
 
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
+        border = BorderStroke(1.dp, if (contrast.isDark) contrast.border.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -66,7 +70,7 @@ fun PageInputCard(
                 text = "Pages read on $formattedDate",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = contrast.primaryText
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -85,7 +89,8 @@ fun PageInputCard(
                         }
                     },
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text("−", fontSize = 20.sp, fontWeight = FontWeight.Bold)
@@ -104,18 +109,18 @@ fun PageInputCard(
                     textStyle = MaterialTheme.typography.titleLarge.copy(
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = contrast.primaryText
                     ),
                     colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        unfocusedBorderColor = contrast.border,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        focusedTextColor = contrast.primaryText,
+                        unfocusedTextColor = contrast.primaryText
                     ),
                     singleLine = true,
-                    modifier = Modifier.width(80.dp)
+                    modifier = Modifier.width(96.dp)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -126,7 +131,8 @@ fun PageInputCard(
                         onPagesInputChange((current + 1).toString())
                     },
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Increment")
@@ -139,7 +145,7 @@ fun PageInputCard(
             Text(
                 text = "$currentPages / $totalPages pages",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = contrast.secondaryText
             )
 
             Spacer(modifier = Modifier.height(6.dp))
@@ -150,19 +156,19 @@ fun PageInputCard(
                     .fillMaxWidth()
                     .height(6.dp),
                 color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                trackColor = if (contrast.isDark) contrast.border.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Log Pages button
+            // Log Pages button (disabled while a log is being written: no double submit)
             Button(
                 onClick = onLogPages,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = pagesInput.isNotEmpty() && (pagesInput.toIntOrNull() ?: 0) > 0
+                enabled = !isLogging && (pagesInput.toIntOrNull() ?: 0) > 0
             ) {
-                Text("Log Pages", fontWeight = FontWeight.SemiBold)
+                Text(if (isLogging) "Logging..." else "Log Pages", fontWeight = FontWeight.SemiBold)
             }
         }
     }

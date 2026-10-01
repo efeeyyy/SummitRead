@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -21,7 +22,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,19 +36,27 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
+private const val PAST_DAYS = 30
+private const val FUTURE_DAYS = 14
+
+/**
+ * 45-day strip. [today] comes from the ViewModel (start-of-day millis that flips at midnight); future days
+ * are shown but disabled because pages cannot be logged ahead of time.
+ */
 @Composable
 fun CalendarStrip(
+    today: Long,
     selectedDate: Long,
     sessions: List<ReadingSessionEntity>,
     onDateSelected: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val today = remember { startOfDay(System.currentTimeMillis()) }
+    val contrast = mountainContrast()
     val days = remember(today) {
         val cal = Calendar.getInstance()
-        (0 until 45).map { i ->
+        (0..(PAST_DAYS + FUTURE_DAYS)).map { i ->
             cal.timeInMillis = today
-            cal.add(Calendar.DAY_OF_YEAR, i - 30)
+            cal.add(Calendar.DAY_OF_YEAR, i - PAST_DAYS)
             startOfDay(cal.timeInMillis)
         }
     }
@@ -51,27 +65,26 @@ fun CalendarStrip(
         sessions.map { startOfDay(it.date) }.toSet()
     }
 
-    val todayIndex = 30 // today is at index 30 (after 30 past days)
     val listState = rememberLazyListState()
-
-    LaunchedEffect(Unit) {
-        listState.animateScrollToItem(todayIndex, scrollOffset = -200)
+    LaunchedEffect(today) {
+        listState.animateScrollToItem(PAST_DAYS, scrollOffset = -200)
     }
 
     val dayOfWeekFormat = remember { SimpleDateFormat("EEE", Locale.getDefault()) }
     val dayNumberFormat = remember { SimpleDateFormat("d", Locale.getDefault()) }
+    val fullFormat = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()) }
 
     LazyRow(
         state = listState,
+        contentPadding = PaddingValues(horizontal = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
     ) {
-        itemsIndexed(days) { _, dayMillis ->
+        itemsIndexed(days, key = { _, day -> day }) { _, dayMillis ->
             val isToday = dayMillis == today
+            val isFuture = dayMillis > today
             val isSelected = dayMillis == startOfDay(selectedDate)
             val hasSession = dayMillis in sessionDates
-
-            val cal = Calendar.getInstance().apply { timeInMillis = dayMillis }
 
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -79,50 +92,51 @@ fun CalendarStrip(
                 modifier = Modifier
                     .width(48.dp)
                     .height(68.dp)
+                    .alpha(if (isFuture) 0.4f else 1f)
                     .clip(MaterialTheme.shapes.small)
                     .then(
                         if (isToday) {
                             Modifier.background(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = if (contrast.isDark) 0.28f else 0.15f),
                                 MaterialTheme.shapes.small
                             )
                         } else Modifier
                     )
                     .then(
-                        if (isSelected && !isToday) {
+                        if (isSelected) {
                             Modifier.border(
-                                1.5.dp,
-                                MaterialTheme.colorScheme.primary,
+                                if (isToday) 2.dp else 1.5.dp,
+                                if (contrast.isDark) contrast.primaryText else MaterialTheme.colorScheme.primary,
                                 MaterialTheme.shapes.small
                             )
                         } else Modifier
                     )
-                    .then(
-                        if (isSelected && isToday) {
-                            Modifier.border(
-                                2.dp,
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.shapes.small
-                            )
-                        } else Modifier
-                    )
-                    .clickable { onDateSelected(dayMillis) }
+                    .semantics {
+                        contentDescription = buildString {
+                            append(fullFormat.format(java.util.Date(dayMillis)))
+                            if (isToday) append(", today")
+                            if (hasSession) append(", pages logged")
+                            if (isFuture) append(", not available yet")
+                        }
+                        selected = isSelected
+                    }
+                    .clickable(enabled = !isFuture, role = Role.Button) { onDateSelected(dayMillis) }
             ) {
                 Text(
-                    text = dayOfWeekFormat.format(cal.time).uppercase(),
+                    text = dayOfWeekFormat.format(java.util.Date(dayMillis)).uppercase(),
                     fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = contrast.secondaryText,
                     fontWeight = FontWeight.Medium
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
-                    text = dayNumberFormat.format(cal.time),
+                    text = dayNumberFormat.format(java.util.Date(dayMillis)),
                     fontSize = 16.sp,
                     fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isToday) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface
+                    color = if (isToday && !contrast.isDark) MaterialTheme.colorScheme.primary
+                    else contrast.primaryText
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
