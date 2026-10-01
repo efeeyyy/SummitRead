@@ -16,12 +16,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class SortOption {
-    MANUAL,
-    NEWEST_FIRST,
-    RECENTLY_READ,
-    PROGRESS,
-    ALPHABETICAL
+enum class SortOption(val label: String) {
+    MANUAL("Manual Order"),
+    NEWEST_FIRST("Newest First"),
+    RECENTLY_READ("Recently Read"),
+    PROGRESS("Progress Percentage"),
+    ALPHABETICAL("Alphabetical")
 }
 
 class HomeViewModel(
@@ -37,19 +37,15 @@ class HomeViewModel(
 
     /** Shelf/list books (archived books are excluded), sorted by [sortOption]. */
     val allBooks: StateFlow<List<BookEntity>> = repository.allBooks
-        .combine(sortOption) { books, option ->
-            when (option) {
-                SortOption.MANUAL -> books.sortedBy { it.displayOrder }
-                SortOption.NEWEST_FIRST -> books.sortedByDescending { it.createdAtMillis }
-                SortOption.RECENTLY_READ -> books.sortedByDescending { it.lastActivityMillis }
-                SortOption.PROGRESS -> books.sortedByDescending {
-                    if (it.totalPages > 0) it.currentPages.toFloat() / it.totalPages else 0f
-                }
-                SortOption.ALPHABETICAL -> books.sortedBy { it.title.lowercase() }
-            }
-        }
+        .combine(sortOption) { books, option -> sortBooks(books, option) }
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** False until the first database emission, so the UI can avoid flashing the empty-shelf message. */
+    val booksLoaded: StateFlow<Boolean> = repository.allBooks
+        .map { true }
+        .catch { emit(true) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     /** Archived books (history is kept); empty unless something was archived. */
     val archivedBooks: StateFlow<List<BookEntity>> = repository.archivedBooks
@@ -98,6 +94,17 @@ class HomeViewModel(
     /** Persists the manual order of the given books (their list index) in one transaction. */
     fun updateBookOrder(orderedBooks: List<BookEntity>) {
         viewModelScope.launch { repository.reorderBooks(orderedBooks.map { it.id }) }
+    }
+
+    /**
+     * Persists a drag-and-drop result: the dropped order becomes the manual order and the sort switches to
+     * [SortOption.MANUAL], so the shelf view reflects it immediately.
+     */
+    fun saveManualOrder(orderedIds: List<Long>) {
+        viewModelScope.launch {
+            repository.reorderBooks(orderedIds)
+            preferences.setSortOptionName(SortOption.MANUAL.name)
+        }
     }
 
     /** Remembers the last opened book; navigation itself passes the id through the route. */
