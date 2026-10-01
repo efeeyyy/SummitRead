@@ -7,68 +7,109 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlin.math.atan2
 
+/**
+ * Device tilt in degrees (already damped for UI use). The values are snapshot state; read them
+ * inside draw/graphicsLayer lambdas so tilting never recomposes the cards.
+ */
+@Stable
+class TiltState {
+    var pitch by mutableFloatStateOf(0f)
+        internal set
+    var roll by mutableFloatStateOf(0f)
+        internal set
+}
+
+/**
+ * ONE tilt sensor listener for the whole screen (#39/#45). It is registered only while the
+ * lifecycle is RESUMED (ON_RESUME/ON_PAUSE) and always released when the composable leaves.
+ * Updates are ignored until the tilt changed by [ProfileLogic.TILT_THRESHOLD_DEGREES].
+ */
 @Composable
-fun rememberGyroscopeSensor(): Pair<Float, Float> {
+fun rememberTiltState(): TiltState {
     val context = LocalContext.current
-    val sensorManager = remember { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
-    val rotationState = remember { mutableStateOf(Pair(0f, 0f)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val tilt = remember { TiltState() }
 
-    DisposableEffect(sensorManager) {
-        val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) 
-            ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    DisposableEffect(context, lifecycleOwner) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val sensor = sensorManager?.let {
+            it.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) ?: it.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        }
+        if (sensorManager == null || sensor == null) {
+            return@DisposableEffect onDispose { }
+        }
+
+        // Preallocated: no per-event allocations.
+        val rotationMatrix = FloatArray(9)
+        val orientation = FloatArray(3)
 
         val listener = object : SensorEventListener {
-            override fun onSensorChanged(event: SensorEvent?) {
-                event?.let {
-                    if (it.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
-                        val rotationMatrix = FloatArray(9)
-                        SensorManager.getRotationMatrixFromVector(rotationMatrix, it.values)
-                        val orientationAngles = FloatArray(3)
-                        SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                        // orientationAngles: 0 = azimuth (Z), 1 = pitch (X), 2 = roll (Y)
-                        val pitch = Math.toDegrees(orientationAngles[1].toDouble()).toFloat()
-                        val roll = Math.toDegrees(orientationAngles[2].toDouble()).toFloat()
-                        
-                        // Dampen the values a bit for UI
-                        val newPitch = pitch * 0.5f
-                        val newRoll = roll * 0.5f
-                        val current = rotationState.value
-                        if (kotlin.math.abs(newPitch - current.first) > 0.5f || kotlin.math.abs(newRoll - current.second) > 0.5f) {
-                            rotationState.value = Pair(newPitch, newRoll)
-                        }
-                    } else if (it.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                        // Fallback for devices without rotation vector
-                        val x = it.values[0]
-                        val y = it.values[1]
-                        val z = it.values[2]
-                        val roll = Math.toDegrees(Math.atan2(x.toDouble(), z.toDouble())).toFloat()
-                        val pitch = Math.toDegrees(Math.atan2(y.toDouble(), z.toDouble())).toFloat()
-                        
-                        val newPitch = pitch * 0.5f
-                        val newRoll = -roll * 0.5f
-                        val current = rotationState.value
-                        if (kotlin.math.abs(newPitch - current.first) > 0.5f || kotlin.math.abs(newRoll - current.second) > 0.5f) {
-                            rotationState.value = Pair(newPitch, newRoll)
-                        }
-                    }
+            override fun onSensorChanged(event: SensorEvent) {
+                val newPitch: Float
+                val newRoll: Float
+                if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
+                    SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
+                    SensorManager.getOrientation(rotationMatrix, orientation)
+                    // orientation: 0 = azimuth, 1 = pitch (X), 2 = roll (Y)
+                    newPitch = Math.toDegrees(orientation[1].toDouble()).toFloat() * DAMPING
+                    newRoll = Math.toDegrees(orientation[2].toDouble()).toFloat() * DAMPING
+                } else {
+                    // Accelerometer fallback for devices without a rotation vector sensor.
+                    val x = event.values[0].toDouble()
+                    val y = event.values[1].toDouble()
+                    val z = event.values[2].toDouble()
+                    newPitch = Math.toDegrees(atan2(y, z)).toFloat() * DAMPING
+                    newRoll = -Math.toDegrees(atan2(x, z)).toFloat() * DAMPING
+                }
+                if (ProfileLogic.exceedsThreshold(tilt.pitch, tilt.roll, newPitch, newRoll)) {
+                    tilt.pitch = newPitch
+                    tilt.roll = newRoll
                 }
             }
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
 
-        sensor?.let {
-            sensorManager.registerListener(listener, it, SensorManager.SENSOR_DELAY_UI)
+        var registered = false
+        fun register() {
+            if (!registered) {
+                registered = sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+            }
+        }
+        fun unregister() {
+            if (registered) {
+                sensorManager.unregisterListener(listener)
+                registered = false
+            }
         }
 
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> register()
+                Lifecycle.Event.ON_PAUSE -> unregister()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
         onDispose {
-            sensorManager.unregisterListener(listener)
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            unregister()
         }
     }
 
-    return rotationState.value
+    return tilt
 }
+
+private const val DAMPING = 0.5f
