@@ -15,7 +15,7 @@ room = "2.7.1"
 ksp = "2.1.20-1.0.31"
 navigationCompose = "2.9.0"
 coil = "3.1.0"
-gson = "2.11.0"
+desugarJdkLibs = "2.1.5"
 datastorePreferences = "1.1.4"
 kotlinxSerializationJson = "1.8.1"
 workManager = "2.10.0"
@@ -44,7 +44,7 @@ room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
-gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }

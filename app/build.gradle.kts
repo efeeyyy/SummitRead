@@ -24,6 +24,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
       compose = true
@@ -49,6 +50,7 @@ dependencies {
   androidTestImplementation(composeBom)
 
   // Core
+  coreLibraryDesugaring(libs.desugar.jdk.libs)
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.activity.compose)
@@ -80,9 +82,6 @@ dependencies {
 
   // Coil
   implementation(libs.coil.compose)
-
-  // Gson
-  implementation(libs.gson)
 
   // DataStore
   implementation(libs.datastore.preferences)

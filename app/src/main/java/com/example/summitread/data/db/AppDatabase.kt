@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
 
 @Database(
     entities = [
@@ -17,7 +16,6 @@ import androidx.room.TypeConverters
     version = 4,
     exportSchema = true
 )
-@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun bookDao(): BookDao
