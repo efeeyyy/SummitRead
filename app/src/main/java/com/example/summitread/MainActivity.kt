@@ -3,7 +3,11 @@ package com.example.summitread
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
+import com.example.summitread.theme.resolveIsDark
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -57,6 +61,22 @@ class MainActivity : ComponentActivity() {
             val themeMode by userPreferences.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
             val accentColorIndex by userPreferences.accentColorIndex.collectAsState(initial = 0)
             val accentColor = AccentColor.entries.getOrNull(accentColorIndex) ?: AccentColor.FOREST_GREEN
+
+            // Status/navigation bar icon colours follow the APP theme, not the system one.
+            val isDark = resolveIsDark(themeMode, isSystemInDarkTheme())
+            DisposableEffect(isDark) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT
+                    ) { isDark },
+                    navigationBarStyle = SystemBarStyle.auto(
+                        android.graphics.Color.argb(0xe6, 0xFF, 0xFF, 0xFF),
+                        android.graphics.Color.argb(0x80, 0x1B, 0x1B, 0x1B)
+                    ) { isDark }
+                )
+                onDispose { }
+            }
 
             SummitReadTheme(
                 themeMode = themeMode,
