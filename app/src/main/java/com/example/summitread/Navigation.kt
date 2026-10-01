@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -52,7 +53,12 @@ fun SummitReadApp(
     context: Context
 ) {
     val navController = rememberNavController()
+    // Set by the Mountain screen; only honoured while that screen is the current destination, so a leftover
+    // flag can never hide the bottom bar on Home/Profile.
     var isFocusMode by remember { mutableStateOf(false) }
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val onMountain = currentEntry?.destination?.hasRoute(MountainRoute::class) == true
+    val hideBottomBar = isFocusMode && onMountain
 
     val navItems = remember {
         listOf(
@@ -73,13 +79,12 @@ fun SummitReadApp(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             AnimatedVisibility(
-                visible = !isFocusMode,
+                visible = !hideBottomBar,
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut()
             ) {
                 NavigationBar {
-                    val navBackStackEntry by navController.currentBackStackEntryAsState()
-                    val currentDestination = navBackStackEntry?.destination
+                    val currentDestination = currentEntry?.destination
 
                     navItems.forEach { item ->
                         NavigationBarItem(
@@ -110,7 +115,10 @@ fun SummitReadApp(
             NavHost(
                 navController = navController,
                 startDestination = HomeRoute,
-                modifier = Modifier.padding(innerPadding)
+                // The screens have their own Scaffolds: tell them these insets are already applied (no double insets)
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .consumeWindowInsets(innerPadding)
             ) {
                 composable<HomeRoute> {
                     HomeScreen(

@@ -3,6 +3,7 @@ package com.example.summitread.ui.mountain
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -14,8 +15,8 @@ fun SummitLogbookDialog(
     onSave: (Float, String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    var review by remember { mutableStateOf("") }
-    var rating by remember { mutableStateOf(5f) }
+    var review by rememberSaveable { mutableStateOf("") }
+    var rating by rememberSaveable { mutableFloatStateOf(5f) }
 
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(

@@ -6,16 +6,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -23,14 +22,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,12 +41,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.summitread.R
 import com.example.summitread.data.ImageStorage
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.data.db.CharacterEntity
 import com.example.summitread.data.db.NoteEntity
+import kotlinx.coroutines.launch
 
+/**
+ * Focus-mode panel with the Notes and Characters tabs. All drafts live here (not in the tabs) and are
+ * `rememberSaveable`, so switching tabs or rotating the device never loses what was typed.
+ */
 @Composable
 fun FocusModeNoteInput(
     book: BookEntity,
@@ -59,11 +62,36 @@ fun FocusModeNoteInput(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    var noteContent by rememberSaveable { mutableStateOf("") }
+    var notePage by rememberSaveable { mutableStateOf("") }
+    var notePhoto by rememberSaveable { mutableStateOf<String?>(null) }
+    var characterName by rememberSaveable { mutableStateOf("") }
+    var characterRole by rememberSaveable { mutableStateOf("") }
+    var characterDescription by rememberSaveable { mutableStateOf("") }
     val tabs = listOf("📝 Notes", "👤 Characters")
 
     Column(modifier = modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTabIndex) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = book.title,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 16.dp)
+            )
+            // Characters tab had no way out of focus mode; this works on both tabs
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, contentDescription = "Exit focus mode")
+            }
+        }
+
+        PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
             tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTabIndex == index,
@@ -76,6 +104,12 @@ fun FocusModeNoteInput(
         if (selectedTabIndex == 0) {
             NotesTab(
                 notes = notes,
+                content = noteContent,
+                onContentChange = { noteContent = it },
+                pageInput = notePage,
+                onPageInputChange = { notePage = it.filter { char -> char.isDigit() } },
+                photoPath = notePhoto,
+                onPhotoPathChange = { notePhoto = it },
                 onAddNote = onAddNote,
                 onDeleteNote = onDeleteNote,
                 onDismiss = onDismiss
@@ -83,6 +117,12 @@ fun FocusModeNoteInput(
         } else {
             CharactersTab(
                 characters = characters,
+                name = characterName,
+                onNameChange = { characterName = it },
+                role = characterRole,
+                onRoleChange = { characterRole = it },
+                description = characterDescription,
+                onDescriptionChange = { characterDescription = it },
                 onAddCharacter = onAddCharacter,
                 onDeleteCharacter = onDeleteCharacter
             )
@@ -93,14 +133,16 @@ fun FocusModeNoteInput(
 @Composable
 private fun NotesTab(
     notes: List<NoteEntity>,
+    content: String,
+    onContentChange: (String) -> Unit,
+    pageInput: String,
+    onPageInputChange: (String) -> Unit,
+    photoPath: String?,
+    onPhotoPathChange: (String?) -> Unit,
     onAddNote: (String, Int, String?) -> Unit,
     onDeleteNote: (NoteEntity) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var content by remember { mutableStateOf("") }
-    var pageInput by remember { mutableStateOf("") }
-    var photoPath by remember { mutableStateOf<String?>(null) }
-    
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -108,7 +150,7 @@ private fun NotesTab(
     ) { uri ->
         if (uri != null) {
             scope.launch {
-                photoPath = ImageStorage.copyImageToInternalStorage(context, uri, "note")
+                onPhotoPathChange(ImageStorage.copyImageToInternalStorage(context, uri, "note"))
             }
         }
     }
@@ -127,13 +169,13 @@ private fun NotesTab(
                 ) {
                     OutlinedTextField(
                         value = content,
-                        onValueChange = { content = it },
+                        onValueChange = onContentChange,
                         label = { Text(stringResource(R.string.note_content)) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         maxLines = 5
                     )
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -141,13 +183,13 @@ private fun NotesTab(
                     ) {
                         OutlinedTextField(
                             value = pageInput,
-                            onValueChange = { pageInput = it.filter { char -> char.isDigit() } },
+                            onValueChange = onPageInputChange,
                             label = { Text("Page") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
                             singleLine = true
                         )
-                        
+
                         IconButton(
                             onClick = {
                                 photoPickerLauncher.launch(
@@ -161,7 +203,7 @@ private fun NotesTab(
 
                     if (photoPath != null) {
                         PolaroidPhoto(
-                            imagePath = photoPath!!,
+                            imagePath = photoPath,
                             pageNumber = pageInput.toIntOrNull() ?: 0,
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
@@ -179,12 +221,12 @@ private fun NotesTab(
                                 val page = pageInput.toIntOrNull() ?: 0
                                 if (content.isNotBlank() && page > 0) {
                                     onAddNote(content, page, photoPath)
-                                    content = ""
-                                    pageInput = ""
-                                    photoPath = null
+                                    onContentChange("")
+                                    onPageInputChange("")
+                                    onPhotoPathChange(null)
                                 }
                             },
-                            enabled = content.isNotBlank() && pageInput.toIntOrNull() != null && (pageInput.toIntOrNull() ?: 0) > 0
+                            enabled = content.isNotBlank() && (pageInput.toIntOrNull() ?: 0) > 0
                         ) {
                             Text(stringResource(R.string.save))
                         }
@@ -205,13 +247,15 @@ private fun NotesTab(
 @Composable
 private fun CharactersTab(
     characters: List<CharacterEntity>,
+    name: String,
+    onNameChange: (String) -> Unit,
+    role: String,
+    onRoleChange: (String) -> Unit,
+    description: String,
+    onDescriptionChange: (String) -> Unit,
     onAddCharacter: (String, String, String) -> Unit,
     onDeleteCharacter: (CharacterEntity) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -225,37 +269,37 @@ private fun CharactersTab(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(stringResource(R.string.add_character), style = MaterialTheme.typography.titleMedium)
-                    
+
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = onNameChange,
                         label = { Text(stringResource(R.string.character_name)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = role,
-                        onValueChange = { role = it },
+                        onValueChange = onRoleChange,
                         label = { Text(stringResource(R.string.character_role)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
                     OutlinedTextField(
                         value = description,
-                        onValueChange = { description = it },
+                        onValueChange = onDescriptionChange,
                         label = { Text(stringResource(R.string.character_description)) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 2,
                         maxLines = 4
                     )
-                    
+
                     Button(
                         onClick = {
                             if (name.isNotBlank()) {
                                 onAddCharacter(name, role, description)
-                                name = ""
-                                role = ""
-                                description = ""
+                                onNameChange("")
+                                onRoleChange("")
+                                onDescriptionChange("")
                             }
                         },
                         modifier = Modifier.align(Alignment.End),

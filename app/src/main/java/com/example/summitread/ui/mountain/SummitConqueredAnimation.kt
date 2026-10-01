@@ -54,12 +54,11 @@ private data class ConfettiParticle(
 
 @Composable
 fun SummitConqueredAnimation(
+    message: String,
+    relicEmoji: String,
     bookTitle: String,
     onDismiss: () -> Unit
 ) {
-    val relicEmojis = listOf("🗡️", "📚", "🔮", "🌟", "⭐", "🏔️")
-    val relic = remember { relicEmojis[Random.nextInt(relicEmojis.size)] }
-
     var showContent by remember { mutableStateOf(false) }
     val trophyScale by animateFloatAsState(
         targetValue = if (showContent) 1f else 0f,
@@ -196,7 +195,7 @@ fun SummitConqueredAnimation(
 
                 // Relic badge
                 Text(
-                    text = relic,
+                    text = relicEmoji,
                     fontSize = 48.sp,
                     modifier = Modifier.graphicsLayer {
                         alpha = textAlpha
@@ -207,12 +206,16 @@ fun SummitConqueredAnimation(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // The exact congratulation text (#33), supplied by the ViewModel
                 Text(
-                    text = "Relic Earned!",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFFFFD700).copy(alpha = 0.8f),
-                    modifier = Modifier.graphicsLayer { alpha = textAlpha }
+                    text = message,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .graphicsLayer { alpha = textAlpha }
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
