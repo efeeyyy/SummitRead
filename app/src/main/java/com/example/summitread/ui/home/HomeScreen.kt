@@ -56,7 +56,7 @@ fun HomeScreen(
     userPreferences: UserPreferences,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    onNavigateToMountain: () -> Unit = {},
+    onNavigateToMountain: (bookId: Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val viewModel: HomeViewModel = viewModel(
@@ -183,10 +183,8 @@ fun HomeScreen(
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onBookClick = { bookId ->
-                                scope.launch { 
-                                    viewModel.setActiveBook(bookId)
-                                    onNavigateToMountain()
-                                }
+                                viewModel.setActiveBook(bookId)
+                                onNavigateToMountain(bookId)
                             },
                             onSaveOrder = if (sortOption == SortOption.MANUAL) {
                                 { orderedList -> viewModel.updateBookOrder(orderedList) }
@@ -210,10 +208,8 @@ fun HomeScreen(
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onBookClick = { bookId ->
-                                scope.launch { 
-                                    viewModel.setActiveBook(bookId)
-                                    onNavigateToMountain()
-                                }
+                                viewModel.setActiveBook(bookId)
+                                onNavigateToMountain(bookId)
                             }
                         )
                     }

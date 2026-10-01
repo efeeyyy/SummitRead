@@ -65,6 +65,7 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.animation.ExperimentalSharedTransitionApi::class)
 @Composable
 fun MountainScreen(
+    bookId: Long,
     bookRepository: BookRepository,
     userPreferences: UserPreferences,
     sharedTransitionScope: SharedTransitionScope,
@@ -74,7 +75,8 @@ fun MountainScreen(
     modifier: Modifier = Modifier
 ) {
     val viewModel: MountainViewModel = viewModel(
-        factory = MountainViewModel.factory(bookRepository, userPreferences)
+        key = "mountain_$bookId",
+        factory = MountainViewModel.factory(bookRepository, userPreferences, bookId)
     )
 
     val activeBook by viewModel.activeBook.collectAsStateWithLifecycle()

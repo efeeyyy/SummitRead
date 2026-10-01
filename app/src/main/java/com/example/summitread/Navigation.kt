@@ -32,6 +32,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.example.summitread.data.BookRepository
 import com.example.summitread.data.UserPreferences
 import com.example.summitread.ui.home.HomeScreen
@@ -117,15 +118,16 @@ fun SummitReadApp(
                         userPreferences = userPreferences,
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this@composable,
-                        onNavigateToMountain = {
-                            navController.navigate(MountainRoute) {
+                        onNavigateToMountain = { bookId ->
+                            navController.navigate(MountainRoute(bookId)) {
                                 launchSingleTop = true
                             }
                         }
                     )
                 }
-                composable<MountainRoute> {
+                composable<MountainRoute> { backStackEntry ->
                     MountainScreen(
+                        bookId = backStackEntry.toRoute<MountainRoute>().bookId,
                         bookRepository = bookRepository,
                         userPreferences = userPreferences,
                         sharedTransitionScope = this@SharedTransitionLayout,

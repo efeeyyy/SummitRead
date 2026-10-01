@@ -28,31 +28,20 @@ import java.time.ZoneId
 @OptIn(ExperimentalCoroutinesApi::class)
 class MountainViewModel(
     private val repository: BookRepository,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val bookId: Long
 ) : ViewModel() {
 
-    val activeBook: StateFlow<BookEntity?> = userPreferences.activeBookId
-        .flatMapLatest { id ->
-            if (id > 0) repository.getBookById(id) else kotlinx.coroutines.flow.flowOf(null)
-        }
+    val activeBook: StateFlow<BookEntity?> = repository.getBookById(bookId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val readingSessions: StateFlow<List<ReadingSessionEntity>> = userPreferences.activeBookId
-        .flatMapLatest { id ->
-            if (id > 0) repository.getSessionsForBook(id) else kotlinx.coroutines.flow.flowOf(emptyList())
-        }
+    val readingSessions: StateFlow<List<ReadingSessionEntity>> = repository.getSessionsForBook(bookId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val notes: StateFlow<List<NoteEntity>> = userPreferences.activeBookId
-        .flatMapLatest { id ->
-            if (id > 0) repository.getNotesForBook(id) else kotlinx.coroutines.flow.flowOf(emptyList())
-        }
+    val notes: StateFlow<List<NoteEntity>> = repository.getNotesForBook(bookId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val characters: StateFlow<List<CharacterEntity>> = userPreferences.activeBookId
-        .flatMapLatest { id ->
-            if (id > 0) repository.getCharactersForBook(id) else kotlinx.coroutines.flow.flowOf(emptyList())
-        }
+    val characters: StateFlow<List<CharacterEntity>> = repository.getCharactersForBook(bookId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _isFocusMode = MutableStateFlow(false)
@@ -173,11 +162,11 @@ class MountainViewModel(
     }
 
     companion object {
-        fun factory(repository: BookRepository, userPreferences: UserPreferences): ViewModelProvider.Factory {
+        fun factory(repository: BookRepository, userPreferences: UserPreferences, bookId: Long): ViewModelProvider.Factory {
             return object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return MountainViewModel(repository, userPreferences) as T
+                    return MountainViewModel(repository, userPreferences, bookId) as T
                 }
             }
         }

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data object HomeRoute
 
 @Serializable
-data object MountainRoute
+data class MountainRoute(val bookId: Long)
 
 @Serializable
 data object ProfileRoute
