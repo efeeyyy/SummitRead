@@ -40,14 +40,15 @@ data class SkyColors(val top: Color, val bottom: Color, val night: Float)
 object SkyModel {
     private class Key(val hour: Float, val top: Color, val bottom: Color, val night: Float)
 
-    private val midnightTop = Color(0xFF0B1021)
-    private val midnightBottom = Color(0xFF1B2735)
-    private val dawnTop = Color(0xFFFFB74D)
-    private val dawnBottom = Color(0xFFFFF3E0)
-    private val dayTop = Color(0xFF64B5F6)
-    private val dayBottom = Color(0xFFE3F2FD)
-    private val twilightTop = Color(0xFF9575CD)
-    private val twilightBottom = Color(0xFFEDE7F6)
+    // Refined palette: cool zenith, warm horizon (soft and desaturated)
+    private val midnightTop = Color(0xFF0A1024)
+    private val midnightBottom = Color(0xFF1F2B49)
+    private val dawnTop = Color(0xFF7C8FD0)
+    private val dawnBottom = Color(0xFFFFD6B8)
+    private val dayTop = Color(0xFF4F9BEA)
+    private val dayBottom = Color(0xFFCFE8FF)
+    private val twilightTop = Color(0xFF3E3F86)
+    private val twilightBottom = Color(0xFFF4A58C)
 
     private val keys = listOf(
         Key(0f, midnightTop, midnightBottom, 1f),

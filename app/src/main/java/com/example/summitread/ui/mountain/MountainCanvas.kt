@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,11 +42,13 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -103,8 +106,8 @@ class MountainGeometry(
             peak.x + (end.x - peak.x) * 0.60f, groundY - dy * 0.20f,
             end.x, end.y
         )
-        lineTo(end.x, groundY + 2f)
-        lineTo(start.x, groundY + 2f)
+        lineTo(end.x, groundY + 12f * unit)
+        lineTo(start.x, groundY + 12f * unit)
         close()
     }
 
@@ -113,6 +116,8 @@ class MountainGeometry(
         moveTo(-width * 0.05f, groundY)
         quadraticTo(width * 0.16f, groundY - (groundY - peak.y) * 0.95f, width * 0.40f, groundY)
         quadraticTo(width * 0.70f, groundY - (groundY - peak.y) * 0.70f, width * 1.05f, groundY)
+        lineTo(width * 1.05f, groundY + 12f * unit)
+        lineTo(-width * 0.05f, groundY + 12f * unit)
         close()
     }
 
@@ -129,6 +134,16 @@ class MountainGeometry(
             lineTo(tx + 13f * unit, groundY)
             close()
         }
+    }
+
+    /** Rolling foothills in front of the base: replaces the old flat ground band. */
+    val foreground = Path().apply {
+        val top = groundY - 4f * unit
+        moveTo(0f, top + 6f * unit)
+        cubicTo(width * 0.28f, top - 9f * unit, width * 0.58f, top + 9f * unit, width, top - 3f * unit)
+        lineTo(width, height)
+        lineTo(0f, height)
+        close()
     }
 
     private val measure = PathMeasure().apply { setPath(trail, false) }
@@ -216,9 +231,19 @@ private class EmojiPaints(unit: Float) {
 }
 
 /**
+ * Vertical position (fraction of the canvas height) the climber is moved to in focus mode: above the notes
+ * sheet, which covers the lower part of the canvas.
+ */
+const val FOCUS_FOCAL_Y = 0.40f
+
+/**
  * The mountain scene: temporal sky, sun/moon, stars, drifting clouds, weather, the mountain with its trail,
  * milestone camps and the climber. All animation runs from one `withFrameNanos` clock that is only read while
  * drawing, so the scene never recomposes per frame; paths, brushes, paints and random data are remembered.
+ *
+ * The canvas is full-bleed: it extends under the status bar and the glass header. [topInset] is the part of
+ * the canvas covered by them: the sky, stars and clouds fill it, while the mountain scene itself is laid out
+ * below it so the summit never hides behind the header.
  */
 @Composable
 fun MountainCanvas(
@@ -227,13 +252,14 @@ fun MountainCanvas(
     totalPages: Int,
     isFocusMode: Boolean,
     accentColor: Color,
-    groundColor: Color,
     isDark: Boolean,
     hoursSinceLastSession: Long,
     streakActive: Boolean,
     isReadingTimerRunning: Boolean,
+    topInset: Dp,
     onSignpostClick: (NoteEntity) -> Unit,
     onMilestoneClick: (Float) -> Unit,
+    onSkyLightnessChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val target = progress.coerceIn(0f, 1f)
@@ -279,8 +305,15 @@ fun MountainCanvas(
     val skyTop = lerp(sky.top, Color.Black, dim)
     val skyBottom = lerp(sky.bottom, Color.Black, dim)
     val shade = max(sky.night, if (isDark) 0.4f else 0f)
-    val snowColor = lerp(Color.White, Color(0xFF9FB3C8), shade)
-    val midColor = lerp(Color(0xFFCFD8DC), Color(0xFF4A5568), shade)
+    val snowColor = lerp(Color(0xFFFFFFFF), Color(0xFF9FB3C8), shade)
+    val midColor = lerp(Color(0xFFB9C4D2), Color(0xFF3F4B63), shade)
+    val baseColor = lerp(accentColor, Color(0xFF0F1A2A), shade * 0.5f)
+    val foreColor = lerp(lerp(accentColor, Color(0xFF14261B), 0.55f), Color.Black, shade * 0.45f)
+    val treeColor = lerp(foreColor, Color.Black, 0.3f)
+
+    // The status bar icons must stay readable on the sky: report whether the top of the sky is light
+    val skyIsLight = skyTop.luminance() > 0.45f
+    LaunchedEffect(skyIsLight) { onSkyLightnessChange(skyIsLight) }
 
     val frameInput = remember { SkyFrameInput() }
     val shootingStar = remember { ShootingStar(Random.Default) }
@@ -328,31 +361,58 @@ fun MountainCanvas(
     val paints = remember(unit) { EmojiPaints(unit) }
     val climbedPath = remember { Path() }
     val trailStroke = remember(unit) {
-        Stroke(width = 3f * unit, pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f * unit, 12f * unit), 0f))
+        Stroke(width = 2.5f * unit, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f * unit, 10f * unit), 0f))
     }
     val climbedStroke = remember(unit) { Stroke(width = 3.5f * unit, cap = StrokeCap.Round) }
+    val climbedGlowStroke = remember(unit) { Stroke(width = 8f * unit, cap = StrokeCap.Round) }
 
-    BoxWithConstraints(modifier = modifier.clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))) {
+    val progressPercent = (target * 100).toInt()
+    BoxWithConstraints(
+        modifier = modifier
+            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+            .semantics { contentDescription = "Mountain: $progressPercent percent climbed" }
+    ) {
         val widthPx = constraints.maxWidth.toFloat()
         val heightPx = constraints.maxHeight.toFloat()
-        val geometry = remember(widthPx, heightPx, unit, tier) { MountainGeometry(widthPx, heightPx, unit, tier) }
+        val insetPx = with(LocalDensity.current) { topInset.toPx() }.coerceIn(0f, heightPx * 0.6f)
+        val geometry = remember(widthPx, heightPx, insetPx, unit, tier) {
+            MountainGeometry(widthPx, heightPx - insetPx, unit, tier)
+        }
+        val skyHeight = insetPx + geometry.groundY
         SideEffect {
             frameInput.night = sky.night
             frameInput.width = widthPx
-            frameInput.height = heightPx
+            frameInput.height = skyHeight
         }
 
-        val skyBrush = remember(skyTop, skyBottom, geometry) {
-            Brush.verticalGradient(listOf(skyTop, skyBottom), startY = 0f, endY = geometry.groundY)
+        val skyBrush = remember(skyTop, skyBottom, skyHeight) {
+            Brush.verticalGradient(listOf(skyTop, skyBottom), startY = 0f, endY = skyHeight)
         }
-        val mountainBrush = remember(snowColor, midColor, accentColor, geometry) {
+        val mountainBrush = remember(snowColor, midColor, baseColor, geometry) {
             Brush.verticalGradient(
-                colors = listOf(snowColor, midColor, accentColor),
+                colors = listOf(snowColor, midColor, baseColor),
                 startY = geometry.peak.y,
                 endY = geometry.groundY
             )
         }
+        // Light comes from the left: the far side of the mountain falls into soft shadow
+        val shadowBrush = remember(geometry) {
+            Brush.horizontalGradient(
+                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.22f)),
+                startX = geometry.peak.x - geometry.width * 0.04f,
+                endX = geometry.end.x
+            )
+        }
         val ridgeColor = remember(midColor, skyBottom) { lerp(midColor, skyBottom, 0.55f) }
+        // Valley mist between the mountain and the foothills
+        val mistBrush = remember(skyBottom, geometry) {
+            val mist = lerp(Color.White, skyBottom, 0.5f)
+            Brush.verticalGradient(
+                colors = listOf(Color.Transparent, mist.copy(alpha = 0.5f), Color.Transparent),
+                startY = geometry.groundY - 46f * unit,
+                endY = geometry.groundY + 8f * unit
+            )
+        }
 
         val notePositions = remember(geometry, notes, totalPages) {
             if (totalPages <= 0) emptyList()
@@ -368,13 +428,14 @@ fun MountainCanvas(
                     val f = focusAmount
                     val s = 1f + 0.7f * f
                     val p = geometry.positionAt(climb.value)
-                    transformOrigin = TransformOrigin(p.x / size.width, p.y / size.height)
+                    val py = p.y + insetPx
+                    transformOrigin = TransformOrigin(p.x / size.width, py / size.height)
                     scaleX = s
                     scaleY = s
                     translationX = (size.width * 0.5f - p.x)
                         .coerceIn((1f - s) * (size.width - p.x), (s - 1f) * p.x)
-                    translationY = (size.height * 0.55f - p.y)
-                        .coerceIn((1f - s) * (size.height - p.y), (s - 1f) * p.y)
+                    translationY = (size.height * FOCUS_FOCAL_Y - py)
+                        .coerceIn((1f - s) * (size.height - py), (s - 1f) * py)
                     clip = true
                 }
         ) {
@@ -387,7 +448,7 @@ fun MountainCanvas(
                 val storm = stormLevel.value
                 val windPush = wind.value
 
-                // Sky
+                // Sky (also behind the status bar and the header)
                 drawRect(brush = skyBrush)
 
                 // Stars (only at night)
@@ -398,7 +459,7 @@ fun MountainCanvas(
                         drawCircle(
                             color = Color.White.copy(alpha = (twinkle * night).coerceIn(0f, 1f)),
                             radius = stars[o + 4] * unit,
-                            center = Offset(stars[o] * w, stars[o + 1] * g.groundY)
+                            center = Offset(stars[o] * w, stars[o + 1] * skyHeight)
                         )
                     }
                     if (shootingStar.active) {
@@ -418,32 +479,35 @@ fun MountainCanvas(
                     }
                 }
 
-                // Sun by day (pulsing), moon by night
+                // Sun by day (pulsing, soft halo), moon by night; both travel below the header
                 if (SkyModel.isSunUp(hour) && night < 0.8f) {
                     val arc = SkyModel.sunArc(hour)
-                    val c = Offset(w * (0.12f + 0.76f * arc), g.groundY * (0.42f - 0.30f * sin(arc * PI.toFloat())))
+                    val c = Offset(w * (0.12f + 0.76f * arc), insetPx + g.groundY * (0.46f - 0.32f * sin(arc * PI.toFloat())))
                     val pulse = 1f + 0.07f * sin(t * 2.2f)
                     val a = 1f - night
-                    drawCircle(Color(0xFFFFD54F).copy(alpha = 0.16f * a), 78f * unit * pulse, c)
-                    drawCircle(Color(0xFFFFD54F).copy(alpha = 0.26f * a), 56f * unit * pulse, c)
-                    drawCircle(Color(0xFFFFCA28).copy(alpha = a), 26f * unit, c)
+                    drawCircle(Color(0xFFFFE0A3).copy(alpha = 0.12f * a), 96f * unit * pulse, c)
+                    drawCircle(Color(0xFFFFD98A).copy(alpha = 0.18f * a), 64f * unit * pulse, c)
+                    drawCircle(Color(0xFFFFE9B0).copy(alpha = 0.30f * a), 42f * unit * pulse, c)
+                    drawCircle(Color(0xFFFFF4D6).copy(alpha = a), 22f * unit, c)
                 } else if (night > 0.5f) {
                     val nightHour = if (hour < 12f) hour + 24f else hour
                     val arc = ((nightHour - 19f) / 11f).coerceIn(0f, 1f)
-                    val c = Offset(w * (0.12f + 0.76f * arc), g.groundY * (0.40f - 0.28f * sin(arc * PI.toFloat())))
-                    drawCircle(Color(0xFFEEF2F7).copy(alpha = 0.12f * night), 40f * unit, c)
-                    drawCircle(Color(0xFFEEF2F7).copy(alpha = night), 17f * unit, c)
+                    val c = Offset(w * (0.12f + 0.76f * arc), insetPx + g.groundY * (0.44f - 0.30f * sin(arc * PI.toFloat())))
+                    drawCircle(Color(0xFFEEF2F7).copy(alpha = 0.10f * night), 44f * unit, c)
+                    drawCircle(Color(0xFFEEF2F7).copy(alpha = night), 16f * unit, c)
+                    // Crescent: a sky-coloured disc bites into the moon
+                    drawCircle(lerp(skyTop, skyBottom, (c.y / skyHeight).coerceIn(0f, 1f)).copy(alpha = night), 13f * unit, Offset(c.x + 6f * unit, c.y - 3f * unit))
                 }
 
                 // Storm tint on the sky
                 if (storm > 0.01f) {
-                    drawRect(Color(0xFF263238).copy(alpha = 0.30f * storm), size = Size(w, g.groundY))
+                    drawRect(Color(0xFF263238).copy(alpha = 0.30f * storm), size = Size(w, skyHeight))
                 }
 
                 // Clouds drifting continuously (#21)
                 val cloudAlpha = lerp(
-                    Color.White.copy(alpha = if (streakActive) 0.55f else 0.75f),
-                    Color(0xFFB0BEC5).copy(alpha = 0.16f),
+                    Color.White.copy(alpha = if (streakActive) 0.5f else 0.7f),
+                    Color(0xFFB0BEC5).copy(alpha = 0.14f),
                     night
                 )
                 for (i in 0 until 5) {
@@ -451,35 +515,43 @@ fun MountainCanvas(
                     val cs = clouds[o + 2] * unit
                     val span = w + 120f * cs
                     val cx = (clouds[o] * span + t * clouds[o + 3] * unit) % span - 60f * cs
-                    drawCloud(cx, clouds[o + 1] * g.groundY, cs, cloudAlpha)
+                    drawCloud(cx, insetPx + clouds[o + 1] * g.groundY, cs, cloudAlpha)
                 }
 
-                // Distant ridge + mountain
+                // The mountain scene is laid out below the header
+                val canvas = drawContext.canvas
+                canvas.save()
+                canvas.translate(0f, insetPx)
+
+                // Distant ridge + mountain with a shaded far side and valley mist
                 drawPath(g.ridge, ridgeColor.copy(alpha = 0.55f))
                 drawPath(g.body, mountainBrush)
+                drawPath(g.body, shadowBrush)
+                drawRect(mistBrush, topLeft = Offset(0f, g.groundY - 46f * unit), size = Size(w, 54f * unit))
 
-                // Ground fills the strip below the base, so no empty rectangle remains under the canvas
-                drawRect(groundColor, topLeft = Offset(0f, g.groundY), size = Size(w, h - g.groundY))
+                // Rolling foothills fill the strip below the base, so no empty band remains under the canvas
+                drawPath(g.foreground, foreColor)
 
-                // Trail: dashed full route, solid climbed part
-                drawPath(g.trail, Color.White.copy(alpha = 0.5f), style = trailStroke)
+                // Trail: dashed full route, solid climbed part with a soft glow
+                drawPath(g.trail, Color.White.copy(alpha = 0.55f), style = trailStroke)
                 val shown = climb.value
                 if (shown > 0.001f) {
                     g.segment(shown, climbedPath)
-                    drawPath(climbedPath, Color.White.copy(alpha = 0.95f), style = climbedStroke)
+                    drawPath(climbedPath, Color.White.copy(alpha = 0.22f), style = climbedGlowStroke)
+                    drawPath(climbedPath, Color.White.copy(alpha = 0.96f), style = climbedStroke)
                 }
 
                 // Trees at the base (apex up)
-                drawPath(g.trees, Color(0xFF1B5E20))
+                drawPath(g.trees, treeColor)
 
                 // Summit flag
-                drawContext.canvas.nativeCanvas.drawText("🚩", g.peak.x + 5f * unit, g.peak.y + 3f * unit, paints.flag)
+                canvas.nativeCanvas.drawText("🚩", g.peak.x + 5f * unit, g.peak.y + 3f * unit, paints.flag)
 
                 // Milestone tents
                 for (i in g.milestones.indices) {
                     val m = g.milestones[i]
                     paints.tent.alpha = if (target >= m.first) 255 else 140
-                    drawContext.canvas.nativeCanvas.drawText("⛺", m.second.x, m.second.y + 2f * unit, paints.tent)
+                    canvas.nativeCanvas.drawText("⛺", m.second.x, m.second.y + 2f * unit, paints.tent)
                 }
 
                 // Storm clouds + fog around the summit (#20); wind blows them away when pages are logged
@@ -511,7 +583,7 @@ fun MountainCanvas(
                 val camp = focusAmount
                 val p = g.positionAt(shown)
                 val cx = p.x.coerceIn(10f * unit, w - 10f * unit)
-                val cy = p.y.coerceIn(40f * unit, h)
+                val cy = p.y.coerceIn(52f * unit, h - insetPx)
                 val climbing = climb.isRunning || isReadingTimerRunning
                 if (camp < 0.99f) {
                     drawClimber(
@@ -526,19 +598,26 @@ fun MountainCanvas(
                 }
                 if (camp > 0.01f) {
                     paints.camp.alpha = (camp * 255).toInt()
-                    drawContext.canvas.nativeCanvas.drawText("⛺", cx, cy + 2f * unit, paints.camp)
+                    canvas.nativeCanvas.drawText("⛺", cx, cy + 2f * unit, paints.camp)
                 }
+                canvas.restore()
             }
 
             // Touch targets: same px coordinates as the canvas, inside the same zoom layer, dp-sized
             val half = with(LocalDensity.current) { 24.dp.roundToPx() }
+            val insetInt = insetPx.toInt()
             notePositions.forEach { (note, pos) ->
                 Box(
                     modifier = Modifier
-                        .offset { IntOffset(pos.x.toInt() - half, pos.y.toInt() - 2 * half) }
+                        .offset { IntOffset(pos.x.toInt() - half, pos.y.toInt() + insetInt - 2 * half) }
                         .size(48.dp)
                         .semantics { contentDescription = "Note signpost, page ${note.pageNumber}" }
-                        .clickable(role = Role.Button, enabled = !isFocusMode) { onSignpostClick(note) },
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Button,
+                            enabled = !isFocusMode
+                        ) { onSignpostClick(note) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text("🪧", fontSize = 22.sp)
@@ -548,10 +627,15 @@ fun MountainCanvas(
                 val percent = (fraction * 100).toInt()
                 Box(
                     modifier = Modifier
-                        .offset { IntOffset(pos.x.toInt() - half, pos.y.toInt() - half - half / 2) }
+                        .offset { IntOffset(pos.x.toInt() - half, pos.y.toInt() + insetInt - half - half / 2) }
                         .size(48.dp)
                         .semantics { contentDescription = "Camp at $percent percent" }
-                        .clickable(role = Role.Button, enabled = !isFocusMode) { onMilestoneClick(fraction) }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Button,
+                            enabled = !isFocusMode
+                        ) { onMilestoneClick(fraction) }
                 )
             }
         }
