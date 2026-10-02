@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Window background before Compose draws: matches LightBackground / DarkBackground in theme/Color.kt. -->
-    <color name="window_background">#FFF8F6F2</color>
+    <!-- Window background before Compose draws: matches groupedBackground in theme/Color.kt (iOS #F2F2F7). -->
+    <color name="window_background">#FFF2F2F7</color>
 
     <!-- Light base; values-night/themes.xml switches to the dark Material theme so the first frame is not white. -->
     <style name="Theme.SummitRead" parent="android:Theme.Material.Light.NoActionBar">
