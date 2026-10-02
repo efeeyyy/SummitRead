@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,6 +56,8 @@ import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
 import com.example.summitread.theme.rememberAppHaptics
 import com.example.summitread.theme.tabularNumbers
+import com.example.summitread.ui.components.AppMenu
+import com.example.summitread.ui.components.AppMenuItem
 import com.example.summitread.ui.components.CardContainer
 import com.example.summitread.ui.components.IconButtonStyle
 import com.example.summitread.ui.components.IconCircleButton
@@ -341,9 +344,10 @@ private fun BookListItem(
                             style = IconButtonStyle.Plain,
                             tint = colors.secondaryLabel
                         )
-                        HomeDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            HomeMenuItem(
+                        AppMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            AppMenuItem(
                                 text = stringResource(R.string.archive),
+                                icon = Icons.Rounded.Inventory2,
                                 onClick = {
                                     menuOpen = false
                                     onArchive()

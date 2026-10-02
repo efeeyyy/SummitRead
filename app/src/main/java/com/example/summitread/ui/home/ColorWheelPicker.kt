@@ -3,6 +3,7 @@ package com.example.summitread.ui.home
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,7 +74,7 @@ fun ColorWheelPicker(
     hsv: Hsv,
     onChange: (Hsv) -> Unit,
     modifier: Modifier = Modifier,
-    wheelSize: Dp = 232.dp
+    wheelSize: Dp = 192.dp
 ) {
     val colors = AppTheme.colors
     val current by rememberUpdatedState(hsv)
@@ -88,8 +89,8 @@ fun ColorWheelPicker(
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Canvas(
             modifier = Modifier
-                .fillMaxWidth()
                 .widthIn(max = wheelSize)
+                .fillMaxWidth()
                 .aspectRatio(1f)
                 .semantics { contentDescription = description }
                 .pointerInput(Unit) {
@@ -108,9 +109,24 @@ fun ColorWheelPicker(
                             change(Hsv(hue, saturation, current.value))
                         }
 
-                        pick(down.position)
-                        down.consume()
-                        drag(down.id) { pointer ->
+                        // Only a press on the disc belongs to the wheel; the corners and the rim are left
+                        // unconsumed, so the sheet still scrolls when the finger starts there.
+                        if ((down.position - center).getDistance() > radius + WheelRimPadding.toPx() / 2f) {
+                            return@awaitEachGesture
+                        }
+                        // Nothing is consumed until the finger has moved past the touch slop (a deliberate drag)
+                        // or lifted (a tap), so a parent scroll can still win a plain swipe that began elsewhere.
+                        val dragStart = awaitTouchSlopOrCancellation(down.id) { change, _ -> change.consume() }
+                        if (dragStart == null) {
+                            val up = currentEvent.changes.firstOrNull { it.id == down.id }
+                            if (up != null && !up.pressed && !up.isConsumed) {
+                                pick(up.position) // tap
+                                up.consume()
+                            }
+                            return@awaitEachGesture
+                        }
+                        pick(dragStart.position)
+                        drag(dragStart.id) { pointer ->
                             pick(pointer.position)
                             pointer.consume()
                         }

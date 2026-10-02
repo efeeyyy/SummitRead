@@ -8,7 +8,6 @@
     <string name="switch_to_list_view">Switch to list view</string>
     <string name="switch_to_shelf_view">Switch to shelf view</string>
     <string name="sort_prefix">Sort: %1$s</string>
-    <string name="menu_item_selected">Selected</string>
     <string name="empty_library_title">Your library is empty</string>
     <string name="empty_library_message">Add your first book and start climbing.</string>
     <string name="empty_archive_title">No archived books</string>

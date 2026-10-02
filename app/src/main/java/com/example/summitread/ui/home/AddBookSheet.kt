@@ -26,10 +26,8 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -63,6 +61,7 @@ import com.example.summitread.theme.AppType
 import com.example.summitread.theme.rememberAppHaptics
 import com.example.summitread.ui.components.AppSheet
 import com.example.summitread.ui.components.AppTextField
+import com.example.summitread.ui.components.rememberAppSheetState
 import com.example.summitread.ui.components.HairlineWidth
 import com.example.summitread.ui.components.PillButton
 import com.example.summitread.ui.components.PillSize
@@ -75,7 +74,6 @@ import kotlinx.coroutines.launch
  * "Add Book" bottom sheet: cover picker with a rounded preview, three fields, the colour presets plus the
  * colour wheel (scrolls inside the sheet) and a pinned primary button.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddBookSheet(
     onDismissRequest: () -> Unit,
@@ -108,7 +106,7 @@ fun AddBookSheet(
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberAppSheetState()
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -147,7 +145,7 @@ fun AddBookSheet(
             modifier = Modifier
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.lg)
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.md)
         ) {
             // Cover: rounded preview (the picked image, or the vector cover in the picked colour) + actions.
             Row(
@@ -162,7 +160,7 @@ fun AddBookSheet(
                         if (coverImagePath != null) R.string.cover_preview else R.string.color_preview
                     ),
                     modifier = Modifier
-                        .size(96.dp, 144.dp)
+                        .size(80.dp, 120.dp)
                         .pressableScale(
                             onClick = {
                                 haptics.light()

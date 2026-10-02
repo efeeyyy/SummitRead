@@ -1,5 +1,7 @@
 package com.example.summitread.ui.home
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
@@ -40,6 +42,8 @@ import com.example.summitread.R
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.theme.AppType
 import com.example.summitread.theme.rememberAppHaptics
+import com.example.summitread.ui.components.AppMenu
+import com.example.summitread.ui.components.AppMenuItem
 import com.example.summitread.ui.components.appShadow
 import com.example.summitread.ui.components.pressScale
 
@@ -198,9 +202,10 @@ fun BookSpineItem(
         }
 
         if (onArchive != null) {
-            HomeDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                HomeMenuItem(
+            AppMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                AppMenuItem(
                     text = stringResource(R.string.archive),
+                    icon = Icons.Rounded.Inventory2,
                     onClick = {
                         menuOpen = false
                         onArchive()

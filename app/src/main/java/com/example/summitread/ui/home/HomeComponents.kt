@@ -7,19 +7,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.SwapVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +44,8 @@ import com.example.summitread.theme.AppShapes
 import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
 import com.example.summitread.theme.rememberAppHaptics
+import com.example.summitread.ui.components.AppMenu
+import com.example.summitread.ui.components.AppMenuItem
 import com.example.summitread.ui.components.GroupedRow
 import com.example.summitread.ui.components.HairlineWidth
 import com.example.summitread.ui.components.InsetGroupedSection
@@ -104,49 +102,6 @@ fun StreakBadge(streak: Int, modifier: Modifier = Modifier) {
     }
 }
 
-/** Dropdown menu in the design-system look (rounded, opaque elevated surface, soft shadow). */
-@Composable
-fun HomeDropdownMenu(
-    expanded: Boolean,
-    onDismissRequest: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest,
-        shape = AppShapes.medium,
-        containerColor = AppTheme.colors.elevatedSurface,
-        tonalElevation = 0.dp,
-        shadowElevation = 12.dp,
-        content = content
-    )
-}
-
-@Composable
-fun HomeMenuItem(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    selected: Boolean = false
-) {
-    val colors = AppTheme.colors
-    DropdownMenuItem(
-        text = { Text(text, style = AppType.Body, color = colors.label) },
-        trailingIcon = if (selected) {
-            {
-                Icon(
-                    Icons.Rounded.Check,
-                    contentDescription = stringResource(R.string.menu_item_selected),
-                    tint = colors.tint,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        } else null,
-        onClick = onClick,
-        modifier = modifier
-    )
-}
-
 /** "Sort: Manual Order" capsule that opens the sort menu. Shown above the list view. */
 @Composable
 fun SortChip(
@@ -196,9 +151,9 @@ fun SortChip(
                 modifier = Modifier.size(18.dp)
             )
         }
-        HomeDropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        AppMenu(expanded = open, onDismissRequest = { open = false }) {
             SortOption.entries.forEach { option ->
-                HomeMenuItem(
+                AppMenuItem(
                     text = option.label,
                     selected = option == current,
                     onClick = {
