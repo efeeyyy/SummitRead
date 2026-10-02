@@ -3,28 +3,26 @@ package com.example.summitread.ui.mountain
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Tab
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -34,20 +32,37 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.summitread.R
 import com.example.summitread.data.ImageStorage
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.data.db.CharacterEntity
 import com.example.summitread.data.db.NoteEntity
+import com.example.summitread.theme.AppShapes
+import com.example.summitread.theme.AppSpacing
+import com.example.summitread.theme.AppTheme
+import com.example.summitread.theme.AppType
+import com.example.summitread.ui.components.AppTextField
+import com.example.summitread.ui.components.CardContainer
+import com.example.summitread.ui.components.IconButtonStyle
+import com.example.summitread.ui.components.IconCircleButton
+import com.example.summitread.ui.components.PillButton
+import com.example.summitread.ui.components.PillSize
+import com.example.summitread.ui.components.PillStyle
+import com.example.summitread.ui.components.SegmentedControl
+import com.example.summitread.ui.components.appShadow
 import kotlinx.coroutines.launch
 
 /**
- * Focus-mode panel with the Notes and Characters tabs. All drafts live here (not in the tabs) and are
+ * Focus-mode panel with the Notes and Characters tabs, drawn as a sheet that docks under the zoomed camp
+ * (28dp top corners, opaque elevated surface). All drafts live here (not in the tabs) and are
  * `rememberSaveable`, so switching tabs or rotating the device never loses what was typed.
  */
 @Composable
@@ -62,6 +77,7 @@ fun FocusModeNoteInput(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = AppTheme.colors
     var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
     var noteContent by rememberSaveable { mutableStateOf("") }
     var notePage by rememberSaveable { mutableStateOf("") }
@@ -69,37 +85,50 @@ fun FocusModeNoteInput(
     var characterName by rememberSaveable { mutableStateOf("") }
     var characterRole by rememberSaveable { mutableStateOf("") }
     var characterDescription by rememberSaveable { mutableStateOf("") }
-    val tabs = listOf("📝 Notes", "👤 Characters")
+    val tabs = listOf("Notes", "Characters")
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .appShadow(elevation = 16.dp, shape = AppShapes.sheet)
+            .clip(AppShapes.sheet)
+            .background(colors.elevatedSurface)
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = AppSpacing.lg, end = AppSpacing.xs, top = AppSpacing.xs),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = book.title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 16.dp)
-            )
-            // Characters tab had no way out of focus mode; this works on both tabs
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, contentDescription = "Exit focus mode")
-            }
-        }
-
-        PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
-                    text = { Text(title) }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = book.title,
+                    style = AppType.Headline,
+                    color = colors.label,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Camp notes and characters",
+                    style = AppType.Footnote,
+                    color = colors.secondaryLabel
                 )
             }
+            // Works on both tabs: the way out of focus mode
+            IconCircleButton(
+                icon = Icons.Rounded.Close,
+                contentDescription = "Exit focus mode",
+                onClick = onDismiss
+            )
         }
+
+        SegmentedControl(
+            options = tabs,
+            selectedIndex = selectedTabIndex,
+            onSelect = { selectedTabIndex = it },
+            modifier = Modifier.padding(horizontal = AppSpacing.md, vertical = AppSpacing.xs)
+        )
 
         if (selectedTabIndex == 0) {
             NotesTab(
@@ -111,8 +140,7 @@ fun FocusModeNoteInput(
                 photoPath = notePhoto,
                 onPhotoPathChange = { notePhoto = it },
                 onAddNote = onAddNote,
-                onDeleteNote = onDeleteNote,
-                onDismiss = onDismiss
+                onDeleteNote = onDeleteNote
             )
         } else {
             CharactersTab(
@@ -131,6 +159,30 @@ fun FocusModeNoteInput(
 }
 
 @Composable
+private fun tabContentPadding(): PaddingValues {
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    return PaddingValues(
+        start = AppSpacing.md,
+        end = AppSpacing.md,
+        top = AppSpacing.xs,
+        bottom = navBottom + AppSpacing.xl
+    )
+}
+
+@Composable
+private fun EmptyHint(text: String) {
+    Text(
+        text = text,
+        style = AppType.Subheadline,
+        color = AppTheme.colors.secondaryLabel,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = AppSpacing.md)
+    )
+}
+
+@Composable
 private fun NotesTab(
     notes: List<NoteEntity>,
     content: String,
@@ -140,8 +192,7 @@ private fun NotesTab(
     photoPath: String?,
     onPhotoPathChange: (String?) -> Unit,
     onAddNote: (String, Int, String?) -> Unit,
-    onDeleteNote: (NoteEntity) -> Unit,
-    onDismiss: () -> Unit
+    onDeleteNote: (NoteEntity) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -154,87 +205,89 @@ private fun NotesTab(
             }
         }
     }
+    val canSave = content.isNotBlank() && (pageInput.toIntOrNull() ?: 0) > 0
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = tabContentPadding(),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.md)
     ) {
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
+            CardContainer(modifier = Modifier.fillMaxWidth(), containerColor = AppTheme.colors.groupedBackground) {
+                Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+                    AppTextField(
                         value = content,
                         onValueChange = onContentChange,
-                        label = { Text(stringResource(R.string.note_content)) },
-                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = stringResource(R.string.note_content),
+                        singleLine = false,
                         minLines = 3,
-                        maxLines = 5
+                        maxLines = 6,
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)
                     ) {
-                        OutlinedTextField(
+                        AppTextField(
                             value = pageInput,
                             onValueChange = onPageInputChange,
-                            label = { Text("Page") },
+                            placeholder = "Page",
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
+                            modifier = Modifier.weight(1f)
                         )
-
-                        IconButton(
+                        IconCircleButton(
+                            icon = Icons.Rounded.CameraAlt,
+                            contentDescription = stringResource(R.string.attach_photo),
                             onClick = {
                                 photoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                                 )
-                            }
-                        ) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = stringResource(R.string.attach_photo))
-                        }
+                            },
+                            size = 44.dp
+                        )
                     }
 
                     if (photoPath != null) {
-                        PolaroidPhoto(
-                            imagePath = photoPath,
-                            pageNumber = pageInput.toIntOrNull() ?: 0,
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            PolaroidPhoto(
+                                imagePath = photoPath,
+                                pageNumber = pageInput.toIntOrNull() ?: 0,
+                                modifier = Modifier.graphicsLayer { rotationZ = -1.5f }
+                            )
+                        }
+                        PillButton(
+                            text = "Remove photo",
+                            onClick = { onPhotoPathChange(null) },
+                            style = PillStyle.Plain,
+                            size = PillSize.Small,
+                            destructive = true,
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
                     }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = onDismiss) {
-                            Text(stringResource(R.string.cancel))
-                        }
-                        Button(
-                            onClick = {
-                                val page = pageInput.toIntOrNull() ?: 0
-                                if (content.isNotBlank() && page > 0) {
-                                    onAddNote(content, page, photoPath)
-                                    onContentChange("")
-                                    onPageInputChange("")
-                                    onPhotoPathChange(null)
-                                }
-                            },
-                            enabled = content.isNotBlank() && (pageInput.toIntOrNull() ?: 0) > 0
-                        ) {
-                            Text(stringResource(R.string.save))
-                        }
-                    }
+                    PillButton(
+                        text = stringResource(R.string.save),
+                        onClick = {
+                            val page = pageInput.toIntOrNull() ?: 0
+                            if (content.isNotBlank() && page > 0) {
+                                onAddNote(content, page, photoPath)
+                                onContentChange("")
+                                onPageInputChange("")
+                                onPhotoPathChange(null)
+                            }
+                        },
+                        enabled = canSave,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
 
+        if (notes.isEmpty()) {
+            item { EmptyHint("No notes yet. Capture a thought from the trail, with the page it belongs to.") }
+        }
         items(notes, key = { it.id }) { note ->
             NoteCard(
                 note = note,
@@ -256,44 +309,44 @@ private fun CharactersTab(
     onAddCharacter: (String, String, String) -> Unit,
     onDeleteCharacter: (CharacterEntity) -> Unit
 ) {
+    val colors = AppTheme.colors
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = tabContentPadding(),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.md)
     ) {
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(stringResource(R.string.add_character), style = MaterialTheme.typography.titleMedium)
-
-                    OutlinedTextField(
+            CardContainer(modifier = Modifier.fillMaxWidth(), containerColor = colors.groupedBackground) {
+                Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+                    Text(
+                        text = stringResource(R.string.add_character),
+                        style = AppType.Headline,
+                        color = colors.label,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                    AppTextField(
                         value = name,
                         onValueChange = onNameChange,
-                        label = { Text(stringResource(R.string.character_name)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        placeholder = stringResource(R.string.character_name),
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    OutlinedTextField(
+                    AppTextField(
                         value = role,
                         onValueChange = onRoleChange,
-                        label = { Text(stringResource(R.string.character_role)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        placeholder = stringResource(R.string.character_role),
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    OutlinedTextField(
+                    AppTextField(
                         value = description,
                         onValueChange = onDescriptionChange,
-                        label = { Text(stringResource(R.string.character_description)) },
-                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = stringResource(R.string.character_description),
+                        singleLine = false,
                         minLines = 2,
-                        maxLines = 4
+                        maxLines = 4,
+                        modifier = Modifier.fillMaxWidth()
                     )
-
-                    Button(
+                    PillButton(
+                        text = stringResource(R.string.save),
                         onClick = {
                             if (name.isNotBlank()) {
                                 onAddCharacter(name, role, description)
@@ -302,46 +355,50 @@ private fun CharactersTab(
                                 onDescriptionChange("")
                             }
                         },
-                        modifier = Modifier.align(Alignment.End),
-                        enabled = name.isNotBlank()
-                    ) {
-                        Text(stringResource(R.string.save))
-                    }
+                        enabled = name.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
 
+        if (characters.isEmpty()) {
+            item { EmptyHint("No characters yet. Keep track of who is who as the story unfolds.") }
+        }
         items(characters, key = { it.id }) { character ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = character.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        TextButton(onClick = { onDeleteCharacter(character) }) {
-                            Text("Delete", color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                    if (character.role.isNotBlank()) {
-                        Text(
-                            text = character.role,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                    }
-                    if (character.description.isNotBlank()) {
-                        Text(
-                            text = character.description,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+            CardContainer(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = character.name,
+                        style = AppType.Headline,
+                        color = colors.label,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconCircleButton(
+                        icon = Icons.Rounded.Delete,
+                        contentDescription = "Delete character ${character.name}",
+                        onClick = { onDeleteCharacter(character) },
+                        style = IconButtonStyle.Plain,
+                        tint = colors.destructive,
+                        size = 32.dp
+                    )
+                }
+                if (character.role.isNotBlank()) {
+                    MountainChip(text = character.role, modifier = Modifier.padding(top = 2.dp))
+                }
+                if (character.description.isNotBlank()) {
+                    Text(
+                        text = character.description,
+                        style = AppType.Body,
+                        color = colors.label,
+                        modifier = Modifier.padding(top = AppSpacing.xs)
+                    )
                 }
             }
         }

@@ -1,6 +1,7 @@
 package com.example.summitread.ui.mountain
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -42,7 +43,7 @@ fun DrawScope.drawClimber(
     if (alpha <= 0.01f) return
     val climbing = state == ClimbingState.CLIMBING
     val phase = time * 9f
-    val height = 32f * unit
+    val height = 42f * unit
     val slope = tangentDeg.coerceIn(-50f, 20f)
     val lean = (-slope * 0.85f + 6f) * DEG
     val bounce = if (climbing) -abs(sin(phase)) * 2f * unit else sin(time * 2f) * 0.5f * unit
@@ -52,6 +53,13 @@ fun DrawScope.drawClimber(
     canvas.translate(x, y)
     canvas.rotate(slope)
 
+    // Soft contact shadow so the climber sits on the slope
+    drawOval(
+        Color.Black.copy(alpha = 0.16f * alpha),
+        topLeft = Offset(-11f * unit, -2f * unit),
+        size = Size(22f * unit, 4f * unit)
+    )
+
     val thigh = height * 0.21f
     val shin = height * 0.21f
     val hip = Offset(0f, -(thigh + shin) * 0.97f + bounce)
@@ -59,7 +67,7 @@ fun DrawScope.drawClimber(
     val shoulder = Offset(hip.x + sin(lean) * torsoLen, hip.y - cos(lean) * torsoLen)
     val headR = height * 0.10f
     val head = Offset(shoulder.x + sin(lean) * headR * 1.5f, shoulder.y - cos(lean) * headR * 1.5f)
-    val limb = 2.2f * unit
+    val limb = 2.6f * unit
 
     // Legs
     for (leg in 0..1) {
@@ -79,12 +87,12 @@ fun DrawScope.drawClimber(
         PackColor.copy(alpha = alpha),
         Offset(shoulder.x - height * 0.07f, shoulder.y + height * 0.03f),
         Offset(hip.x - height * 0.07f, hip.y - height * 0.06f),
-        4.5f * unit,
+        5.6f * unit,
         StrokeCap.Round
     )
 
     // Torso
-    drawLine(JacketColor.copy(alpha = alpha), hip, shoulder, 4f * unit, StrokeCap.Round)
+    drawLine(JacketColor.copy(alpha = alpha), hip, shoulder, 5f * unit, StrokeCap.Round)
 
     // Arms (swing opposite to the legs); the front arm holds a trekking pole
     val upper = height * 0.17f
@@ -102,7 +110,7 @@ fun DrawScope.drawClimber(
                 PoleColor.copy(alpha = alpha),
                 hand,
                 Offset(hand.x + height * 0.12f, 0f),
-                1.4f * unit,
+                1.6f * unit,
                 StrokeCap.Round
             )
         }
