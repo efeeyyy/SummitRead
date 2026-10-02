@@ -9,28 +9,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.rounded.Book
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -43,21 +42,42 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.summitread.R
 import com.example.summitread.data.ImageStorage
 import com.example.summitread.theme.AccentColor
+import com.example.summitread.theme.AppShapes
+import com.example.summitread.theme.AppSpacing
+import com.example.summitread.theme.AppTheme
+import com.example.summitread.theme.AppType
+import com.example.summitread.theme.rememberAppHaptics
+import com.example.summitread.ui.components.AppSheet
+import com.example.summitread.ui.components.AppTextField
+import com.example.summitread.ui.components.HairlineWidth
+import com.example.summitread.ui.components.PillButton
+import com.example.summitread.ui.components.PillSize
+import com.example.summitread.ui.components.PillStyle
+import com.example.summitread.ui.components.appShadow
+import com.example.summitread.ui.components.pressableScale
 import kotlinx.coroutines.launch
 
+/**
+ * "Add Book" bottom sheet: cover picker with a rounded preview, three fields, the colour presets plus the
+ * colour wheel (scrolls inside the sheet) and a pinned primary button.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddBookDialog(
+fun AddBookSheet(
     onDismissRequest: () -> Unit,
     onSave: (
         title: String,
@@ -68,6 +88,9 @@ fun AddBookDialog(
         coverColorArgb: Int?
     ) -> Unit
 ) {
+    val colors = AppTheme.colors
+    val haptics = rememberAppHaptics()
+
     // Draft state survives rotation and process death (rememberSaveable).
     var title by rememberSaveable { mutableStateOf("") }
     var author by rememberSaveable { mutableStateOf("") }
@@ -80,10 +103,12 @@ fun AddBookDialog(
     var hue by rememberSaveable { mutableFloatStateOf(initialHsv.hue) }
     var saturation by rememberSaveable { mutableFloatStateOf(initialHsv.saturation) }
     var brightness by rememberSaveable { mutableFloatStateOf(initialHsv.value) }
+    var saving by rememberSaveable { mutableStateOf(false) }
     val hsv = Hsv(hue, saturation, brightness)
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -98,163 +123,236 @@ fun AddBookDialog(
             }
         }
     }
+    val pickCover = {
+        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
 
     val pickedColor = if (useCustomColor) hsv.toColor() else AccentColor.entries[selectedColorIndex].lightPrimary
 
-    fun dismiss() {
-        ImageStorage.delete(coverImagePath) // not saved: do not leave the copied cover behind
+    // Called when the sheet was already swiped / tapped away.
+    fun dismissed() {
+        if (!saving) ImageStorage.delete(coverImagePath) // not saved: do not leave the copied cover behind
         onDismissRequest()
     }
 
     val pages = totalPages.toIntOrNull() ?: 0
-    val canSave = title.isNotBlank() && author.isNotBlank() && pages > 0
+    val canSave = title.isNotBlank() && author.isNotBlank() && pages > 0 && !saving
 
-    AlertDialog(
-        onDismissRequest = ::dismiss,
-        title = { Text(stringResource(R.string.add_book)) },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+    AppSheet(
+        onDismissRequest = ::dismissed,
+        title = stringResource(R.string.add_book),
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.lg)
+        ) {
+            // Cover: rounded preview (the picked image, or the vector cover in the picked colour) + actions.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
+                val previewShape = AppShapes.medium
+                CoverImage(
+                    path = coverImagePath,
+                    contentDescription = stringResource(
+                        if (coverImagePath != null) R.string.cover_preview else R.string.color_preview
+                    ),
+                    modifier = Modifier
+                        .size(96.dp, 144.dp)
+                        .pressableScale(
+                            onClick = {
+                                haptics.light()
+                                pickCover()
+                            },
+                            onClickLabel = stringResource(R.string.select_cover),
+                            role = Role.Button
+                        )
+                        .appShadow(elevation = 10.dp, shape = previewShape)
+                        .clip(previewShape)
+                        .border(HairlineWidth, colors.separator, previewShape),
+                    fallback = { VectorCover(base = pickedColor) }
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xxs)) {
+                    PillButton(
+                        text = stringResource(R.string.select_cover),
+                        onClick = { pickCover() },
+                        style = PillStyle.Tinted,
+                        size = PillSize.Small,
+                        leadingIcon = Icons.Rounded.Image
+                    )
+                    if (coverImagePath != null) {
+                        PillButton(
+                            text = stringResource(R.string.remove_cover),
+                            onClick = {
+                                ImageStorage.delete(coverImagePath)
+                                coverImagePath = null
+                            },
+                            style = PillStyle.Plain,
+                            size = PillSize.Small,
+                            destructive = true
+                        )
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+                AppTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.title)) },
-                    leadingIcon = { Icon(Icons.Default.Book, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = stringResource(R.string.title),
+                    leadingIcon = Icons.Rounded.Book,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next
+                    )
                 )
-
-                OutlinedTextField(
+                AppTextField(
                     value = author,
                     onValueChange = { author = it },
-                    label = { Text(stringResource(R.string.author)) },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = stringResource(R.string.author),
+                    leadingIcon = Icons.Rounded.Person,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next
+                    )
                 )
-
-                OutlinedTextField(
+                AppTextField(
                     value = totalPages,
                     onValueChange = { totalPages = it.filter { char -> char.isDigit() }.take(6) },
-                    label = { Text(stringResource(R.string.total_pages)) },
-                    leadingIcon = { Icon(Icons.Default.Description, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    placeholder = stringResource(R.string.total_pages),
+                    leadingIcon = Icons.Rounded.Description,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
                 )
+            }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Button(
-                    onClick = {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
+            // Colour: quick presets (the original palette) and the full colour wheel for any other colour.
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = stringResource(R.string.cover_color).uppercase(),
+                    style = AppType.Footnote,
+                    color = colors.secondaryLabel,
+                    modifier = Modifier.padding(start = AppSpacing.sm)
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(AppShapes.medium)
+                        .background(colors.fill)
+                        .padding(AppSpacing.md),
+                    verticalArrangement = Arrangement.spacedBy(AppSpacing.md)
                 ) {
-                    Text(stringResource(R.string.select_cover))
-                }
-
-                // Cover preview: the selected image, or the vector cover in the picked colour. Rounded corners.
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CoverImage(
-                        path = coverImagePath,
-                        contentDescription = if (coverImagePath != null) "Cover preview" else "Colour preview",
+                    Row(
                         modifier = Modifier
-                            .size(100.dp, 150.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp)),
-                        fallback = { VectorCover(base = pickedColor) }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(stringResource(R.string.accent_color), style = MaterialTheme.typography.labelMedium)
-
-                // Quick presets (the original palette) ...
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    AccentColor.entries.forEachIndexed { index, color ->
-                        val selected = !useCustomColor && selectedColorIndex == index
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(color.lightPrimary)
-                                .selectable(
-                                    selected = selected,
-                                    role = Role.RadioButton,
-                                    onClick = {
-                                        selectedColorIndex = index
-                                        useCustomColor = false
-                                        val preset = color.lightPrimary.toHsv()
-                                        hue = preset.hue
-                                        saturation = preset.saturation
-                                        brightness = preset.value
+                            .fillMaxWidth()
+                            .selectableGroup(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        AccentColor.entries.forEachIndexed { index, color ->
+                            val selected = !useCustomColor && selectedColorIndex == index
+                            val swatchDescription = stringResource(R.string.color_swatch, color.displayName)
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .selectable(
+                                        selected = selected,
+                                        role = Role.RadioButton,
+                                        onClick = {
+                                            haptics.light()
+                                            selectedColorIndex = index
+                                            useCustomColor = false
+                                            val preset = color.lightPrimary.toHsv()
+                                            hue = preset.hue
+                                            saturation = preset.saturation
+                                            brightness = preset.value
+                                        }
+                                    )
+                                    .semantics { contentDescription = swatchDescription }
+                                    .border(
+                                        width = 2.dp,
+                                        color = if (selected) colors.tint else Color.Transparent,
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(color.lightPrimary),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (selected) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Check,
+                                            contentDescription = null,
+                                            tint = color.lightOnPrimary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
-                                )
-                                .semantics { contentDescription = "${color.displayName} colour" }
-                                .border(
-                                    width = if (selected) 3.dp else 0.dp,
-                                    color = if (selected) MaterialTheme.colorScheme.onSurface else androidx.compose.ui.graphics.Color.Transparent,
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (selected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = color.lightOnPrimary
-                                )
+                                }
                             }
                         }
                     }
-                }
 
-                // ... and the full colour wheel for any other colour.
-                ColorWheelPicker(
-                    hsv = hsv,
-                    onChange = {
-                        useCustomColor = true
-                        hue = it.hue
-                        saturation = it.saturation
-                        brightness = it.value
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (canSave) {
-                        onSave(
-                            title.trim(),
-                            author.trim(),
-                            pages,
-                            coverImagePath,
-                            selectedColorIndex,
-                            if (useCustomColor) hsv.toColor().toArgb() else null
-                        )
-                    }
-                },
-                enabled = canSave
-            ) {
-                Text(stringResource(R.string.save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = ::dismiss) {
-                Text(stringResource(R.string.cancel))
+                    ColorWheelPicker(
+                        hsv = hsv,
+                        onChange = {
+                            useCustomColor = true
+                            hue = it.hue
+                            saturation = it.saturation
+                            brightness = it.value
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
-    )
+
+        // Pinned below the scrolling form, so the primary action is always reachable.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = AppSpacing.md)
+                .imePadding()
+                .navigationBarsPadding(),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.xxs)
+        ) {
+            PillButton(
+                text = stringResource(R.string.add_book),
+                onClick = {
+                    if (canSave) {
+                        saving = true
+                        val savedTitle = title.trim()
+                        val savedAuthor = author.trim()
+                        val savedCover = coverImagePath
+                        val savedColorIndex = selectedColorIndex
+                        val savedArgb = if (useCustomColor) hsv.toColor().toArgb() else null
+                        scope.launch {
+                            // Slide the sheet away first, then hand the book over (the caller removes the sheet).
+                            sheetState.hide()
+                            onSave(savedTitle, savedAuthor, pages, savedCover, savedColorIndex, savedArgb)
+                        }
+                    }
+                },
+                enabled = canSave,
+                modifier = Modifier.fillMaxWidth()
+            )
+            PillButton(
+                text = stringResource(R.string.cancel),
+                onClick = {
+                    scope.launch {
+                        sheetState.hide()
+                        dismissed()
+                    }
+                },
+                style = PillStyle.Plain,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
 }

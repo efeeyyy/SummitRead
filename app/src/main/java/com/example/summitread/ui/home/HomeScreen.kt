@@ -3,37 +3,28 @@ package com.example.summitread.ui.home
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -41,20 +32,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.summitread.R
 import com.example.summitread.data.BookRepository
 import com.example.summitread.data.UserPreferences
+import com.example.summitread.theme.AppSpacing
+import com.example.summitread.theme.AppTheme
+import com.example.summitread.theme.AppType
+import com.example.summitread.ui.components.IconButtonStyle
+import com.example.summitread.ui.components.IconCircleButton
+import com.example.summitread.ui.components.LargeTitleScaffold
+import com.example.summitread.ui.components.rememberLargeTitleState
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+/** Which body the Home screen shows; used to re-sync the large-title collapse when the scroll position resets. */
+private const val MODE_SHELF = 0
+private const val MODE_LIST = 1
+private const val MODE_ARCHIVED = 2
+
+@OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
 @Composable
 fun HomeScreen(
     bookRepository: BookRepository,
@@ -77,9 +75,7 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     // UI state that must survive rotation / process death.
-    var showAddDialog by rememberSaveable { mutableStateOf(false) }
-    var showSortMenu by rememberSaveable { mutableStateOf(false) }
-    var showOverflowMenu by rememberSaveable { mutableStateOf(false) }
+    var showAddSheet by rememberSaveable { mutableStateOf(false) }
     var showArchived by rememberSaveable { mutableStateOf(false) }
     var archiveTargetId by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -90,121 +86,91 @@ fun HomeScreen(
         onNavigateToMountain(bookId)
     }
 
+    // A different body starts at the top of its own list, so the large title must expand again. Compared against a
+    // saved value, so a rotation (same body, restored scroll position) keeps the collapse as it was.
+    val titleState = rememberLargeTitleState()
+    val mode = when {
+        showArchived -> MODE_ARCHIVED
+        isListView -> MODE_LIST
+        else -> MODE_SHELF
+    }
+    var lastMode by rememberSaveable { mutableIntStateOf(mode) }
+    LaunchedEffect(mode) {
+        if (mode != lastMode) {
+            lastMode = mode
+            titleState.reset()
+        }
+    }
+
     BackHandler(enabled = showArchived) { showArchived = false }
 
-    Scaffold(
+    LargeTitleScaffold(
+        title = stringResource(if (showArchived) R.string.archived_title else R.string.library),
         modifier = modifier,
-        topBar = {
+        state = titleState,
+        navigationIcon = {
             if (showArchived) {
-                TopAppBar(
-                    title = { Text("Archived books") },
-                    navigationIcon = {
-                        IconButton(onClick = { showArchived = false }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to bookshelf")
-                        }
-                    }
+                IconCircleButton(
+                    icon = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = stringResource(R.string.back_to_library),
+                    onClick = { showArchived = false }
                 )
             } else {
-                TopAppBar(
-                    title = { Text("📚 SummitRead") },
-                    actions = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(end = 4.dp)
-                        ) {
-                            // Streak flame: the value is the derived streak from the logged days.
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.clearAndSetSemantics {
-                                    contentDescription =
-                                        "Current streak: $currentStreak ${if (currentStreak == 1) "day" else "days"}"
-                                }
-                            ) {
-                                Text(text = "🔥", fontSize = 20.sp)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = currentStreak.toString(),
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(4.dp))
-
-                            if (isListView) {
-                                Box {
-                                    IconButton(onClick = { showSortMenu = true }) {
-                                        Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort books")
-                                    }
-                                    DropdownMenu(
-                                        expanded = showSortMenu,
-                                        onDismissRequest = { showSortMenu = false }
-                                    ) {
-                                        SortOption.entries.forEach { option ->
-                                            DropdownMenuItem(
-                                                text = { Text(option.label) },
-                                                trailingIcon = {
-                                                    if (option == sortOption) {
-                                                        Icon(Icons.Default.Check, contentDescription = "Selected")
-                                                    }
-                                                },
-                                                onClick = {
-                                                    viewModel.setSortOption(option)
-                                                    showSortMenu = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            IconButton(onClick = {
-                                scope.launch { userPreferences.setIsListView(!isListView) }
-                            }) {
-                                Icon(
-                                    imageVector = if (isListView) Icons.Default.GridView else Icons.AutoMirrored.Filled.List,
-                                    contentDescription = if (isListView) "Switch to shelf view" else "Switch to list view"
-                                )
-                            }
-
-                            Box {
-                                IconButton(onClick = { showOverflowMenu = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                                }
-                                DropdownMenu(
-                                    expanded = showOverflowMenu,
-                                    onDismissRequest = { showOverflowMenu = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                if (archivedBooks.isEmpty()) "Archived"
-                                                else "Archived (${archivedBooks.size})"
-                                            )
-                                        },
-                                        onClick = {
-                                            showOverflowMenu = false
-                                            showArchived = true
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                )
+                // Streak flame: the value is the derived streak from the logged days.
+                StreakBadge(streak = currentStreak, modifier = Modifier.padding(start = AppSpacing.xs))
             }
         },
-        floatingActionButton = {
+        actions = {
             if (!showArchived) {
-                FloatingActionButton(onClick = { showAddDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_book))
+                if (allBooks.isNotEmpty()) {
+                    IconCircleButton(
+                        icon = if (isListView) Icons.Rounded.GridView else Icons.AutoMirrored.Rounded.List,
+                        contentDescription = stringResource(
+                            if (isListView) R.string.switch_to_shelf_view else R.string.switch_to_list_view
+                        ),
+                        onClick = { scope.launch { userPreferences.setIsListView(!isListView) } }
+                    )
                 }
+                IconCircleButton(
+                    icon = Icons.Rounded.Add,
+                    contentDescription = stringResource(R.string.add_book),
+                    onClick = { showAddSheet = true },
+                    style = IconButtonStyle.Filled
+                )
             }
         }
-    ) { paddingValues ->
+    ) { padding ->
+        // Everything scrolls under the glass bars; the scaffold padding already includes the tab bar height.
         val listPadding = PaddingValues(
-            top = paddingValues.calculateTopPadding(),
-            bottom = paddingValues.calculateBottomPadding() + 80.dp
+            top = padding.calculateTopPadding(),
+            bottom = padding.calculateBottomPadding() + AppSpacing.xl
         )
+        val archivedEntry: (@Composable () -> Unit)? = if (archivedBooks.isNotEmpty()) {
+            {
+                ArchivedEntry(
+                    count = archivedBooks.size,
+                    onClick = { showArchived = true },
+                    modifier = Modifier.padding(horizontal = AppSpacing.screenHorizontal, vertical = AppSpacing.xl)
+                )
+            }
+        } else null
+        val listHeader: @Composable () -> Unit = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AppSpacing.screenHorizontal, vertical = AppSpacing.xxs),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SortChip(current = sortOption, onSelect = viewModel::setSortOption)
+                Text(
+                    text = bookCountText(allBooks.size),
+                    style = AppType.Footnote,
+                    color = AppTheme.colors.secondaryLabel,
+                    modifier = Modifier.padding(end = AppSpacing.xxs)
+                )
+            }
+        }
 
         when {
             showArchived -> ArchivedBooksList(
@@ -215,18 +181,25 @@ fun HomeScreen(
 
             !booksLoaded || listViewPref == null -> Box(modifier = Modifier.fillMaxSize())
 
-            allBooks.isEmpty() -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.no_books_yet),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            allBooks.isEmpty() -> Box(modifier = Modifier.fillMaxSize()) {
+                HomeEmptyState(
+                    icon = Icons.Rounded.AutoStories,
+                    title = stringResource(R.string.empty_library_title),
+                    message = stringResource(R.string.empty_library_message),
+                    actionText = stringResource(R.string.add_book),
+                    actionIcon = Icons.Rounded.Add,
+                    onAction = { showAddSheet = true },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(listPadding)
                 )
+                archivedEntry?.let { entry ->
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = padding.calculateBottomPadding())
+                    ) { entry() }
+                }
             }
 
             isListView -> BookListLayout(
@@ -238,6 +211,8 @@ fun HomeScreen(
                 onArchiveBook = { archiveTargetId = it.id },
                 contentPadding = listPadding,
                 shimmer = shimmer,
+                header = listHeader,
+                footer = archivedEntry,
                 modifier = Modifier.fillMaxSize()
             )
 
@@ -245,9 +220,10 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = listPadding
             ) {
+                item(key = "header") { listHeader() }
                 // Group books into shelves of 4.
                 items(allBooks.chunked(4), key = { shelf -> shelf.first().id }) { shelfBooks ->
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(AppSpacing.md))
                     BookshelfLayout(
                         books = shelfBooks,
                         sharedTransitionScope = sharedTransitionScope,
@@ -257,17 +233,18 @@ fun HomeScreen(
                         onArchiveBook = { archiveTargetId = it.id }
                     )
                 }
+                archivedEntry?.let { entry -> item(key = "footer") { entry() } }
             }
         }
 
-        if (showAddDialog) {
-            AddBookDialog(
-                onDismissRequest = { showAddDialog = false },
+        if (showAddSheet) {
+            AddBookSheet(
+                onDismissRequest = { showAddSheet = false },
                 onSave = { title, author, totalPages, coverImagePath, accentColorIndex, coverColorArgb ->
                     viewModel.addBook(
                         title, author, totalPages, coverImagePath, accentColorIndex, coverColorArgb
                     )
-                    showAddDialog = false
+                    showAddSheet = false
                 }
             )
         }

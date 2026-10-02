@@ -1,35 +1,45 @@
 package com.example.summitread.ui.home
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextAlign
+import com.example.summitread.theme.AppShapes
+import com.example.summitread.R
 import com.example.summitread.data.db.BookEntity
-import androidx.compose.foundation.layout.Column
+import com.example.summitread.theme.AppSpacing
+import com.example.summitread.theme.AppTheme
+import com.example.summitread.theme.AppType
+import com.example.summitread.ui.components.AlertAction
+import com.example.summitread.ui.components.AlertActionStyle
+import com.example.summitread.ui.components.AppAlertDialog
+import com.example.summitread.ui.components.InsetGroupedSection
+import com.example.summitread.ui.components.PillButton
+import com.example.summitread.ui.components.PillSize
+import com.example.summitread.ui.components.PillStyle
 
 /** Asks before a book is archived; archiving only hides it, sessions, notes and relics are kept. */
 @Composable
@@ -38,22 +48,18 @@ fun ArchiveConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    AppAlertDialog(
+        title = stringResource(R.string.archive_book_title),
+        message = stringResource(R.string.archive_book_message, bookTitle),
         onDismissRequest = onDismiss,
-        title = { Text("Archive book?") },
-        text = {
-            Text(
-                "\"$bookTitle\" will be hidden from your shelf and list. " +
-                    "Your reading sessions, notes and relics are kept, and you can unarchive it any time " +
-                    "from the Archived screen."
-            )
-        },
-        confirmButton = { Button(onClick = onConfirm) { Text("Archive") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        actions = listOf(
+            AlertAction(stringResource(R.string.archive), onConfirm, AlertActionStyle.Destructive),
+            AlertAction(stringResource(R.string.cancel), onDismiss, AlertActionStyle.Cancel)
+        )
     )
 }
 
-/** The archived books with an "Unarchive" action each. */
+/** The archived books as an inset-grouped list with an "Unarchive" action per row. */
 @Composable
 fun ArchivedBooksList(
     books: List<BookEntity>,
@@ -62,64 +68,127 @@ fun ArchivedBooksList(
     contentPadding: PaddingValues = PaddingValues()
 ) {
     if (books.isEmpty()) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(
-                text = "No archived books.",
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        HomeEmptyState(
+            icon = Icons.Rounded.Inventory2,
+            title = stringResource(R.string.empty_archive_title),
+            message = stringResource(R.string.empty_archive_message),
+            modifier = modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+        )
         return
     }
-    LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = contentPadding) {
-        items(books, key = { it.id }) { book ->
-            val baseColor = bookBaseColor(book)
-            ElevatedCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(12.dp)
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = AppSpacing.screenHorizontal,
+            end = AppSpacing.screenHorizontal,
+            top = contentPadding.calculateTopPadding() + AppSpacing.xs,
+            bottom = contentPadding.calculateBottomPadding() + AppSpacing.xl
+        )
+    ) {
+        item(key = "archived-section") {
+            InsetGroupedSection(
+                footer = stringResource(R.string.archived_footer),
+                separatorInset = 68.dp
             ) {
-                Row(
-                    modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CoverImage(
-                        path = book.coverImagePath,
-                        contentDescription = "Cover of ${book.title}",
-                        modifier = Modifier
-                            .width(40.dp)
-                            .height(60.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        fallback = { VectorCover(base = baseColor) }
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = book.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${book.author} · ${bookProgressPercent(book)}% Read",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    TextButton(
-                        onClick = { onUnarchive(book) },
-                        modifier = Modifier.semantics { contentDescription = "Unarchive ${book.title}" }
-                    ) {
-                        Text("Unarchive")
-                    }
-                }
+                books.forEach { book -> row { ArchivedRow(book, onUnarchive = { onUnarchive(book) }) } }
             }
         }
     }
 }
 
+@Composable
+private fun ArchivedRow(book: BookEntity, onUnarchive: () -> Unit) {
+    val colors = AppTheme.colors
+    val unarchiveLabel = stringResource(R.string.unarchive_book, book.title)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = AppSpacing.md, top = 10.dp, bottom = 10.dp, end = AppSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+    ) {
+        CoverThumbnail(book = book, width = 40.dp, height = 60.dp, corner = 6.dp)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = book.title,
+                style = AppType.Headline,
+                color = colors.label,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = stringResource(R.string.author_and_percent, book.author, bookProgressPercent(book)),
+                style = AppType.Subheadline,
+                color = colors.secondaryLabel,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        PillButton(
+            text = stringResource(R.string.unarchive),
+            onClick = onUnarchive,
+            style = PillStyle.Tinted,
+            size = PillSize.Small,
+            modifier = Modifier.semantics { contentDescription = unarchiveLabel }
+        )
+    }
+}
+
+/** Calm empty state: round icon badge, title, one line of explanation and an optional action. */
+@Composable
+fun HomeEmptyState(
+    icon: ImageVector,
+    title: String,
+    message: String,
+    modifier: Modifier = Modifier,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
+    actionIcon: ImageVector? = null
+) {
+    val colors = AppTheme.colors
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier.padding(horizontal = AppSpacing.xxl),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)
+        ) {
+            Box(
+                Modifier
+                    .padding(bottom = AppSpacing.sm)
+                    .size(96.dp)
+                    .clip(AppShapes.pill)
+                    .background(colors.tintContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = colors.tint,
+                    modifier = Modifier.size(44.dp)
+                )
+            }
+            Text(
+                text = title,
+                style = AppType.Title2,
+                color = colors.label,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = message,
+                style = AppType.Subheadline,
+                color = colors.secondaryLabel,
+                textAlign = TextAlign.Center
+            )
+            if (actionText != null && onAction != null) {
+                PillButton(
+                    text = actionText,
+                    onClick = onAction,
+                    leadingIcon = actionIcon,
+                    modifier = Modifier.padding(top = AppSpacing.md)
+                )
+            }
+        }
+    }
+}
