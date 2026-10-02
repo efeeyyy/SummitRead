@@ -2,90 +2,121 @@ package com.example.summitread.ui.mountain
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.summitread.data.db.NoteEntity
 import com.example.summitread.services.ReadingTimerService
+import com.example.summitread.theme.AppSpacing
+import com.example.summitread.theme.AppTheme
+import com.example.summitread.theme.AppType
+import com.example.summitread.ui.components.AppSheet
+import com.example.summitread.ui.components.GroupedRow
+import com.example.summitread.ui.components.InsetGroupedSection
+import com.example.summitread.ui.components.PillButton
+import com.example.summitread.ui.components.PillStyle
+import com.example.summitread.ui.components.ProgressRing
+import com.example.summitread.ui.components.RowTrailing
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Dialog opened by tapping a camp (25 / 50 / 75 %): a motivational line plus the stats up to that point (#22). */
+/**
+ * Sheet opened by tapping a camp (25 / 50 / 75 %): a progress ring, a motivational line and the stats up to that
+ * point in an iOS grouped list (#22).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MilestoneDialog(
     bookId: Long,
     stats: MilestoneStats,
     onDismiss: () -> Unit
 ) {
+    val colors = AppTheme.colors
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
     val percent = (stats.fraction * 100).toInt()
     val quote = remember(bookId, stats.fraction) { MilestoneQuotes.quoteFor(stats.fraction, bookId) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("⛺ ${MilestoneQuotes.campName(stats.fraction)} - $percent%") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "\"$quote\"",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontStyle = FontStyle.Italic
-                )
-                StatRow("Pages at this camp", "${stats.pagesAtMilestone}")
-                if (stats.reached) {
-                    StatRow("Status", "Reached")
-                    stats.reachedOnMillis?.let { StatRow("Reached on", dateFormat.format(Date(it))) }
-                    StatRow("Sessions to get here", "${stats.sessionsToReach}")
-                    if (stats.timeSpentMillis > 0L) {
-                        StatRow("Time reading", ReadingTimerService.formatElapsed(stats.timeSpentMillis))
-                    }
-                } else {
-                    StatRow("Status", "Not reached yet")
-                    StatRow("Pages to go", "${stats.pagesToGo}")
-                    StatRow("Sessions so far", "${stats.sessionsToReach}")
-                }
+    AppSheet(onDismissRequest = onDismiss, title = "⛺ ${MilestoneQuotes.campName(stats.fraction)}") {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            ProgressRing(
+                progress = if (stats.reached) 1f else stats.fraction,
+                size = 88.dp,
+                strokeWidth = 9.dp,
+                color = if (stats.reached) colors.success else colors.tint
+            ) {
+                Text("$percent%", style = AppType.Title3, color = colors.label)
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Keep climbing") }
+            Text(
+                text = "\"$quote\"",
+                style = AppType.Callout,
+                fontStyle = FontStyle.Italic,
+                color = colors.secondaryLabel,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = AppSpacing.sm, bottom = AppSpacing.md, start = AppSpacing.xs, end = AppSpacing.xs)
+            )
         }
-    )
+
+        InsetGroupedSection {
+            row { GroupedRow("Pages at this camp", trailing = RowTrailing.Value("${stats.pagesAtMilestone}")) }
+            if (stats.reached) {
+                row { GroupedRow("Status", trailing = RowTrailing.Value("Reached")) }
+                stats.reachedOnMillis?.let {
+                    row { GroupedRow("Reached on", trailing = RowTrailing.Value(dateFormat.format(Date(it)))) }
+                }
+                row { GroupedRow("Sessions to get here", trailing = RowTrailing.Value("${stats.sessionsToReach}")) }
+                if (stats.timeSpentMillis > 0L) {
+                    row {
+                        GroupedRow(
+                            "Time reading",
+                            trailing = RowTrailing.Value(ReadingTimerService.formatElapsed(stats.timeSpentMillis))
+                        )
+                    }
+                }
+            } else {
+                row { GroupedRow("Status", trailing = RowTrailing.Value("Not reached yet")) }
+                row { GroupedRow("Pages to go", trailing = RowTrailing.Value("${stats.pagesToGo}")) }
+                row { GroupedRow("Sessions so far", trailing = RowTrailing.Value("${stats.sessionsToReach}")) }
+            }
+        }
+
+        PillButton(
+            text = "Keep climbing",
+            onClick = onDismiss,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = AppSpacing.md)
+        )
+    }
 }
 
 /** Shows the text of a note when its signpost on the trail is tapped. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteSignpostDialog(
     note: NoteEntity,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("🪧 Page ${note.pageNumber}") },
-        text = { Text(note.content, style = MaterialTheme.typography.bodyMedium) },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
-    )
-}
-
-@Composable
-private fun StatRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(start = 12.dp)
-        )
+    AppSheet(onDismissRequest = onDismiss, title = "🪧 Page ${note.pageNumber}") {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
+            NoteCard(note = note)
+            PillButton(
+                text = "Close",
+                onClick = onDismiss,
+                style = PillStyle.Tinted,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
