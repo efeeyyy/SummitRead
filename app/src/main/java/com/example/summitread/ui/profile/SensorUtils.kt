@@ -72,9 +72,14 @@ fun rememberTiltState(): TiltState {
                     newPitch = Math.toDegrees(atan2(y, z)).toFloat() * DAMPING
                     newRoll = -Math.toDegrees(atan2(x, z)).toFloat() * DAMPING
                 }
-                if (ProfileLogic.exceedsThreshold(tilt.pitch, tilt.roll, newPitch, newRoll)) {
-                    tilt.pitch = newPitch
-                    tilt.roll = newRoll
+                // getOrientation() uses asin(); near upright (pitch ≈ ±90°) float rounding can
+                // yield NaN, and a NaN offset makes LinearGradient creation throw.
+                if (!newPitch.isFinite() || !newRoll.isFinite()) return
+                val pitch = newPitch.coerceIn(-MAX_TILT_DEGREES, MAX_TILT_DEGREES)
+                val roll = newRoll.coerceIn(-MAX_TILT_DEGREES, MAX_TILT_DEGREES)
+                if (ProfileLogic.exceedsThreshold(tilt.pitch, tilt.roll, pitch, roll)) {
+                    tilt.pitch = pitch
+                    tilt.roll = roll
                 }
             }
 
@@ -113,3 +118,4 @@ fun rememberTiltState(): TiltState {
 }
 
 private const val DAMPING = 0.5f
+private const val MAX_TILT_DEGREES = 45f
