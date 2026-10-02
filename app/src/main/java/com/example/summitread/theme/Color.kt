@@ -1,28 +1,41 @@
 package com.example.summitread.theme
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 
-// Base palette — Light theme
-val LightBackground = Color(0xFFF8F6F2)       // warm off-white
-val LightSurface = Color(0xFFFFFFFF)           // pure white cards
-val LightSurfaceVariant = Color(0xFFF0EDE8)    // slightly warm gray
+// --- iOS system palette (SummitRead design system, see docs/DESIGN.md) -----------------------
 
-// Base palette — Dark theme
-val DarkBackground = Color(0xFF1A1A2E)         // deep navy
-val DarkSurface = Color(0xFF242442)            // slightly lighter navy
-val DarkSurfaceVariant = Color(0xFF2D2D50)
+// Light
+val IosLightGroupedBackground = Color(0xFFF2F2F7) // systemGroupedBackground
+val IosLightSurface = Color(0xFFFFFFFF)           // secondarySystemGroupedBackground
+val IosLightLabel = Color(0xFF000000)
+val IosLightSecondaryLabel = Color(0xFF636366)    // >=4.5:1 on every light surface (iOS 60% alpha is ~3.2:1)
+val IosLightTertiaryLabel = Color(0xFFA0A0A5)     // placeholders / disabled only
+val IosLightSeparator = Color(0x4A3C3C43)         // 29% alpha, hairline
+val IosLightFill = Color(0x1F767680)              // tertiarySystemFill (12%)
 
-// Text colors
-val TextPrimary = Color(0xFF2C2C2C)            // near-black
-val TextSecondary = Color(0xFF6B6B6B)          // medium gray
-val TextOnDark = Color(0xFFE8E8E8)
-val TextSecondaryOnDark = Color(0xFFB0B0B0)
+// Dark (true black, OLED friendly)
+val IosDarkBackground = Color(0xFF000000)
+val IosDarkSurface = Color(0xFF1C1C1E)            // secondarySystemGroupedBackground
+val IosDarkElevated = Color(0xFF2C2C2E)           // tertiarySystemGroupedBackground
+val IosDarkLabel = Color(0xFFFFFFFF)
+val IosDarkSecondaryLabel = Color(0xFF9D9DA3)
+val IosDarkTertiaryLabel = Color(0xFF6E6E73)
+val IosDarkSeparator = Color(0x99545458)
+val IosDarkFill = Color(0x3D767680)               // 24%
 
-// Shelf accent
-val ShelfBrown = Color(0xFF8B6914)             // wooden shelf
+// Shelf accent (wooden shelf on the home screen; decorative, not part of the iOS palette)
+val ShelfBrown = Color(0xFF8B6914)
 val ShelfBrownDark = Color(0xFF6B4F12)
 val ShelfBrownLight = Color(0xFFC49B3A)
 
+/**
+ * The single user-chosen tint colour. Values are slightly desaturated "premium" tints:
+ * every [lightPrimary]/[lightOnPrimary] and [darkPrimary]/[darkOnPrimary] pair keeps text
+ * contrast >= 4.5:1 (enforced by AccentContrastTest).
+ */
 enum class AccentColor(
     val displayName: String,
     val lightPrimary: Color,
@@ -36,57 +49,136 @@ enum class AccentColor(
 ) {
     FOREST_GREEN(
         displayName = "Forest",
-        lightPrimary = Color(0xFF2E7D32),
-        lightSecondary = Color(0xFF66BB6A),
-        lightPrimaryContainer = Color(0xFFC8E6C9),
+        lightPrimary = Color(0xFF2B7A55),
+        lightSecondary = Color(0xFF3F8F69),
+        lightPrimaryContainer = Color(0xFFDCEFE4),
         lightOnPrimary = Color.White,
-        darkPrimary = Color(0xFF81C784),
-        darkSecondary = Color(0xFF388E3C),
-        darkPrimaryContainer = Color(0xFF1B5E20),
-        darkOnPrimary = Color(0xFF1B5E20)
+        darkPrimary = Color(0xFF5FD39A),
+        darkSecondary = Color(0xFF3FA97A),
+        darkPrimaryContainer = Color(0xFF173A2B),
+        darkOnPrimary = Color(0xFF04261A)
     ),
     SUNSET_ORANGE(
         displayName = "Sunset",
-        lightPrimary = Color(0xFFE65100),
-        lightSecondary = Color(0xFFFF8F00),
-        lightPrimaryContainer = Color(0xFFFFE0B2),
+        lightPrimary = Color(0xFFB8440F),
+        lightSecondary = Color(0xFFD1601F),
+        lightPrimaryContainer = Color(0xFFFBE3D4),
         lightOnPrimary = Color.White,
-        darkPrimary = Color(0xFFFFB74D),
-        darkSecondary = Color(0xFFF57C00),
-        darkPrimaryContainer = Color(0xFFBF360C),
-        darkOnPrimary = Color(0xFF3E2723)
+        darkPrimary = Color(0xFFFF9F5C),
+        darkSecondary = Color(0xFFE67E33),
+        darkPrimaryContainer = Color(0xFF47260F),
+        darkOnPrimary = Color(0xFF3A1904)
     ),
     OCEAN_BLUE(
         displayName = "Ocean",
-        lightPrimary = Color(0xFF1565C0),
-        lightSecondary = Color(0xFF42A5F5),
-        lightPrimaryContainer = Color(0xFFBBDEFB),
+        lightPrimary = Color(0xFF0A64CF),
+        lightSecondary = Color(0xFF2273D6),
+        lightPrimaryContainer = Color(0xFFDAE9FB),
         lightOnPrimary = Color.White,
-        darkPrimary = Color(0xFF90CAF9),
-        darkSecondary = Color(0xFF1E88E5),
-        darkPrimaryContainer = Color(0xFF0D47A1),
-        darkOnPrimary = Color(0xFF0D47A1)
+        darkPrimary = Color(0xFF64B0FF),
+        darkSecondary = Color(0xFF3D8FE6),
+        darkPrimaryContainer = Color(0xFF12304F),
+        darkOnPrimary = Color(0xFF00203F)
     ),
     BERRY_PURPLE(
         displayName = "Berry",
-        lightPrimary = Color(0xFF7B1FA2),
-        lightSecondary = Color(0xFFAB47BC),
-        lightPrimaryContainer = Color(0xFFE1BEE7),
+        lightPrimary = Color(0xFF8338AC),
+        lightSecondary = Color(0xFF9A52C1),
+        lightPrimaryContainer = Color(0xFFEDDCF6),
         lightOnPrimary = Color.White,
-        darkPrimary = Color(0xFFCE93D8),
-        darkSecondary = Color(0xFF8E24AA),
-        darkPrimaryContainer = Color(0xFF4A148C),
-        darkOnPrimary = Color(0xFF4A148C)
+        darkPrimary = Color(0xFFC999EE),
+        darkSecondary = Color(0xFFAC74D6),
+        darkPrimaryContainer = Color(0xFF3A1F4E),
+        darkOnPrimary = Color(0xFF2B0F42)
     ),
     AUTUMN_RED(
         displayName = "Autumn",
-        lightPrimary = Color(0xFFC62828),
-        lightSecondary = Color(0xFFEF5350),
-        lightPrimaryContainer = Color(0xFFFFCDD2),
+        lightPrimary = Color(0xFFC0332B),
+        lightSecondary = Color(0xFFC63D35),
+        lightPrimaryContainer = Color(0xFFF9DDDA),
         lightOnPrimary = Color.White,
-        darkPrimary = Color(0xFFEF9A9A),
-        darkSecondary = Color(0xFFD32F2F),
-        darkPrimaryContainer = Color(0xFFB71C1C),
-        darkOnPrimary = Color(0xFFB71C1C)
+        darkPrimary = Color(0xFFFF8B80),
+        darkSecondary = Color(0xFFE86A5F),
+        darkPrimaryContainer = Color(0xFF4E1F1B),
+        darkOnPrimary = Color(0xFF450905)
     )
 }
+
+/** Semantic colour roles. Read via `AppTheme.colors`; also mapped into the Material colour scheme. */
+@Immutable
+data class AppColors(
+    val isDark: Boolean,
+    /** Primary canvas of grouped screens (iOS systemGroupedBackground; pure black in dark). */
+    val groupedBackground: Color,
+    /** Plain full-screen canvas (iOS systemBackground). */
+    val background: Color,
+    /** Cards / grouped rows sitting on [groupedBackground]. */
+    val surface: Color,
+    /** Sheets, alerts, popovers: one step above [surface]. */
+    val elevatedSurface: Color,
+    val label: Color,
+    val secondaryLabel: Color,
+    val tertiaryLabel: Color,
+    /** Hairline (translucent): use with 0.5dp-1px width. */
+    val separator: Color,
+    /** Translucent grey fill for fields, segmented tracks, neutral buttons. */
+    val fill: Color,
+    /** The user-chosen accent. */
+    val tint: Color,
+    val onTint: Color,
+    /** Soft tinted background (badges, tinted buttons). */
+    val tintContainer: Color,
+    val success: Color,
+    val warning: Color,
+    val destructive: Color,
+    /** Summit / achievement gold. */
+    val gold: Color
+) {
+    /** [fill] flattened onto [surface], for places that need an opaque colour. */
+    val fillOpaque: Color get() = fill.compositeOver(surface)
+}
+
+fun appColors(isDark: Boolean, accent: AccentColor): AppColors =
+    if (isDark) {
+        AppColors(
+            isDark = true,
+            groupedBackground = IosDarkBackground,
+            background = IosDarkBackground,
+            surface = IosDarkSurface,
+            elevatedSurface = IosDarkElevated,
+            label = IosDarkLabel,
+            secondaryLabel = IosDarkSecondaryLabel,
+            tertiaryLabel = IosDarkTertiaryLabel,
+            separator = IosDarkSeparator,
+            fill = IosDarkFill,
+            tint = accent.darkPrimary,
+            onTint = accent.darkOnPrimary,
+            tintContainer = accent.darkPrimaryContainer,
+            success = Color(0xFF32D74B),
+            warning = Color(0xFFFF9F0A),
+            destructive = Color(0xFFFF6961),
+            gold = Color(0xFFF5C451)
+        )
+    } else {
+        AppColors(
+            isDark = false,
+            groupedBackground = IosLightGroupedBackground,
+            background = IosLightSurface,
+            surface = IosLightSurface,
+            elevatedSurface = IosLightSurface,
+            label = IosLightLabel,
+            secondaryLabel = IosLightSecondaryLabel,
+            tertiaryLabel = IosLightTertiaryLabel,
+            separator = IosLightSeparator,
+            fill = IosLightFill,
+            tint = accent.lightPrimary,
+            onTint = accent.lightOnPrimary,
+            tintContainer = accent.lightPrimaryContainer,
+            success = Color(0xFF248A3D),
+            warning = Color(0xFFB25000),
+            destructive = Color(0xFFD70015),
+            gold = Color(0xFFB8860B)
+        )
+    }
+
+val LocalAppColors = staticCompositionLocalOf { appColors(isDark = false, accent = AccentColor.FOREST_GREEN) }

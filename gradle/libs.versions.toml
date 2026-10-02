@@ -19,6 +19,7 @@ desugarJdkLibs = "2.1.5"
 datastorePreferences = "1.1.4"
 kotlinxSerializationJson = "1.8.1"
 workManager = "2.10.0"
+haze = "1.7.2"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -48,6 +49,7 @@ desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref 
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workManager" }
 
 [plugins]
