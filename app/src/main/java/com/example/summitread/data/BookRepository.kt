@@ -183,8 +183,6 @@ class BookRepository(private val dao: BookDao) {
             )
         }
 
-    val totalPagesRead: Flow<Int> = dao.getTotalPagesRead()
-
     /** Sum of the real stopwatch time of all sessions (not the 1.5 min/page estimate). */
     val totalTimeReadMillis: Flow<Long> = dao.getTotalTimeReadMillis()
 

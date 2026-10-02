@@ -256,9 +256,6 @@ abstract class BookDao {
     )
     abstract fun getCompletedBooksBetween(fromMillis: Long, toMillis: Long): Flow<Int>
 
-    @Query("SELECT COALESCE(SUM(pagesRead), 0) FROM reading_sessions")
-    abstract fun getTotalPagesRead(): Flow<Int>
-
     @Query("SELECT COALESCE(SUM(timeSpentMillis), 0) FROM reading_sessions")
     abstract fun getTotalTimeReadMillis(): Flow<Long>
 }
