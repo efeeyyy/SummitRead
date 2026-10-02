@@ -1,6 +1,7 @@
 package com.example.summitread.ui.profile
 
 import com.example.summitread.data.PageMath
+import com.example.summitread.data.db.BookEntity
 import com.example.summitread.data.db.NoteEntity
 import com.example.summitread.data.db.ReadingSessionEntity
 import kotlin.math.abs
@@ -39,6 +40,27 @@ object ProfileLogic {
         }
         return if (parts.isEmpty()) "0 Hours Climbed" else parts.joinToString(", ") + " Climbed"
     }
+
+    /** Compact ClimbTime for stat tiles: "3d 4h", "2h 30m", "45m". Same minutes as [formatClimbTime]. */
+    fun formatClimbTimeCompact(pages: Int): String {
+        val totalMinutes = (pages.coerceAtLeast(0) * PageMath.MINUTES_PER_PAGE).toInt()
+        val days = totalMinutes / (24 * 60)
+        val hours = (totalMinutes % (24 * 60)) / 60
+        val mins = totalMinutes % 60
+        return when {
+            days > 0 -> "${days}d ${hours}h"
+            hours > 0 -> "${hours}h ${mins}m"
+            else -> "${mins}m"
+        }
+    }
+
+    /**
+     * Pages actually read = sum of each book's progress (currentPages), clamped to 0..totalPages.
+     * Deliberately NOT the sum of session pages: legacy sessions may exceed a book's totalPages,
+     * which inflated the old total (1422 vs 1406).
+     */
+    fun pagesRead(books: List<BookEntity>): Int =
+        books.sumOf { it.currentPages.coerceIn(0, it.totalPages.coerceAtLeast(0)) }
 
     /** Real timed reading, compact: "3h 20m", "45m", "0m". Seconds are dropped (rounded down). */
     fun formatTimedDuration(millis: Long): String {

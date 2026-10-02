@@ -1,5 +1,6 @@
 package com.example.summitread.ui.profile
 
+import com.example.summitread.data.db.BookEntity
 import com.example.summitread.data.db.NoteEntity
 import com.example.summitread.data.db.ReadingSessionEntity
 import org.junit.Assert.assertEquals
@@ -73,5 +74,24 @@ class ProfileLogicTest {
         assertEquals(listOf(n1), bySession[1L])
         assertEquals(listOf(n2), bySession[2L])
         assertEquals(listOf(n4, n3), other) // unknown/missing session -> "Other notes", by creation time
+    }
+
+    @Test
+    fun pagesReadSumsBookProgressClamped() {
+        fun book(current: Int, total: Int) =
+            BookEntity(title = "t", author = "a", totalPages = total, currentPages = current)
+        // 162 + 1234 + 10 = 1406 (the emulator QA case).
+        assertEquals(1406, ProfileLogic.pagesRead(listOf(book(162, 300), book(1234, 1234), book(10, 200))))
+        // Progress beyond totalPages and negatives are clamped.
+        assertEquals(100, ProfileLogic.pagesRead(listOf(book(150, 100), book(-5, 50))))
+        assertEquals(0, ProfileLogic.pagesRead(emptyList()))
+    }
+
+    @Test
+    fun compactClimbTime() {
+        assertEquals("0m", ProfileLogic.formatClimbTimeCompact(0))
+        assertEquals("1h 0m", ProfileLogic.formatClimbTimeCompact(40))
+        assertEquals("2h 30m", ProfileLogic.formatClimbTimeCompact(100))
+        assertEquals("1d 1h", ProfileLogic.formatClimbTimeCompact(1000)) // 1500 min
     }
 }
