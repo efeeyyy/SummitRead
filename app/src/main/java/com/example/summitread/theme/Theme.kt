@@ -7,9 +7,12 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import com.example.summitread.data.ThemeMode
 
 data class AppThemeState(
@@ -26,6 +29,15 @@ fun resolveIsDark(themeMode: ThemeMode, systemDark: Boolean): Boolean = when (th
     ThemeMode.SYSTEM -> systemDark
 }
 
+/** Entry point for design-system tokens: `AppTheme.colors.label`, `AppTheme.isDark`. */
+object AppTheme {
+    val colors: AppColors
+        @Composable @ReadOnlyComposable get() = LocalAppColors.current
+
+    val isDark: Boolean
+        @Composable @ReadOnlyComposable get() = LocalAppColors.current.isDark
+}
+
 @Composable
 fun SummitReadTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -33,59 +45,84 @@ fun SummitReadTheme(
     content: @Composable () -> Unit
 ) {
     val isDark = resolveIsDark(themeMode, isSystemInDarkTheme())
-    val colorScheme = summitColorScheme(isDark, accentColor)
-    val appThemeState = AppThemeState(themeMode = themeMode, accentColor = accentColor)
+    val colors = remember(isDark, accentColor) { appColors(isDark, accentColor) }
+    val colorScheme = remember(isDark, accentColor) { summitColorScheme(isDark, accentColor) }
+    val appThemeState = remember(themeMode, accentColor) { AppThemeState(themeMode, accentColor) }
 
-    CompositionLocalProvider(LocalAppThemeState provides appThemeState) {
+    CompositionLocalProvider(
+        LocalAppThemeState provides appThemeState,
+        LocalAppColors provides colors
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = SummitReadTypography,
+            shapes = SummitReadShapes,
             content = content
         )
     }
 }
 
+/** WCAG contrast ratio between two opaque colours (1..21). */
+fun contrastRatio(a: Color, b: Color): Double {
+    val la = a.luminance().toDouble()
+    val lb = b.luminance().toDouble()
+    val hi = maxOf(la, lb)
+    val lo = minOf(la, lb)
+    return (hi + 0.05) / (lo + 0.05)
+}
+
+/** White or near-black, whichever reads better on [background]. */
+fun readableOn(background: Color): Color {
+    val dark = Color(0xFF111111)
+    return if (contrastRatio(background, Color.White) >= contrastRatio(background, dark)) Color.White else dark
+}
+
 /**
- * Full colour scheme derived from the accent colour, so no role falls back to the default
- * M3 purple (secondaryContainer, tertiary, outline, surfaceContainer*, ...).
+ * Material colour scheme built from the iOS palette ([appColors]) and the accent, so every
+ * role (secondaryContainer, tertiary, outline, surfaceContainer*, ...) is defined and existing
+ * M3 screens pick up the new look.
  */
-fun summitColorScheme(isDark: Boolean, accent: AccentColor): ColorScheme =
-    if (isDark) {
+fun summitColorScheme(isDark: Boolean, accent: AccentColor): ColorScheme {
+    val c = appColors(isDark, accent)
+    return if (isDark) {
         val primary = accent.darkPrimary
-        val secondary = lerp(primary, TextOnDark, 0.2f) // readable on the navy surfaces
-        val secondaryContainer = lerp(accent.darkPrimaryContainer, DarkSurface, 0.35f)
         darkColorScheme(
             primary = primary,
             onPrimary = accent.darkOnPrimary,
             primaryContainer = accent.darkPrimaryContainer,
             onPrimaryContainer = lerp(primary, Color.White, 0.55f),
-            secondary = secondary,
-            onSecondary = accent.darkOnPrimary,
-            secondaryContainer = secondaryContainer,
-            onSecondaryContainer = lerp(primary, Color.White, 0.6f),
+            secondary = accent.darkSecondary,
+            onSecondary = readableOn(accent.darkSecondary),
+            secondaryContainer = accent.darkPrimaryContainer,
+            onSecondaryContainer = lerp(primary, Color.White, 0.55f),
             tertiary = accent.darkSecondary,
-            onTertiary = Color.White,
-            tertiaryContainer = lerp(accent.darkSecondary, DarkSurface, 0.6f),
-            onTertiaryContainer = lerp(primary, Color.White, 0.6f),
-            background = DarkBackground,
-            onBackground = TextOnDark,
-            surface = DarkSurface,
-            onSurface = TextOnDark,
-            surfaceVariant = DarkSurfaceVariant,
-            onSurfaceVariant = TextSecondaryOnDark,
+            onTertiary = readableOn(accent.darkSecondary),
+            tertiaryContainer = accent.darkPrimaryContainer,
+            onTertiaryContainer = lerp(primary, Color.White, 0.55f),
+            background = c.groupedBackground,
+            onBackground = c.label,
+            surface = c.surface,
+            onSurface = c.label,
+            surfaceVariant = IosDarkElevated,
+            onSurfaceVariant = c.secondaryLabel,
             surfaceTint = primary,
-            inverseSurface = TextOnDark,
-            inverseOnSurface = DarkBackground,
+            inverseSurface = Color(0xFFE5E5EA),
+            inverseOnSurface = Color(0xFF1C1C1E),
             inversePrimary = accent.lightPrimary,
-            outline = Color(0xFF8A8AA8),
-            outlineVariant = Color(0xFF3F3F63),
-            surfaceBright = Color(0xFF34345C),
-            surfaceDim = DarkBackground,
-            surfaceContainerLowest = Color(0xFF14142A),
-            surfaceContainerLow = Color(0xFF1F1F3A),
-            surfaceContainer = DarkSurface,
-            surfaceContainerHigh = Color(0xFF2B2B4D),
-            surfaceContainerHighest = DarkSurfaceVariant
+            error = c.destructive,
+            onError = Color(0xFF3A0504),
+            errorContainer = Color(0xFF4A1512),
+            onErrorContainer = Color(0xFFFFB4AE),
+            outline = Color(0xFF8E8E93),
+            outlineVariant = Color(0xFF38383A),
+            scrim = Color.Black,
+            surfaceBright = Color(0xFF3A3A3C),
+            surfaceDim = IosDarkBackground,
+            surfaceContainerLowest = IosDarkBackground,
+            surfaceContainerLow = c.surface,
+            surfaceContainer = c.surface,
+            surfaceContainerHigh = c.elevatedSurface,
+            surfaceContainerHighest = c.elevatedSurface
         )
     } else {
         val primary = accent.lightPrimary
@@ -95,31 +132,37 @@ fun summitColorScheme(isDark: Boolean, accent: AccentColor): ColorScheme =
             primaryContainer = accent.lightPrimaryContainer,
             onPrimaryContainer = lerp(primary, Color.Black, 0.55f),
             secondary = accent.lightSecondary,
-            onSecondary = Color.White,
-            secondaryContainer = lerp(accent.lightPrimaryContainer, LightSurface, 0.45f),
-            onSecondaryContainer = lerp(primary, Color.Black, 0.5f),
-            tertiary = lerp(primary, accent.lightSecondary, 0.5f),
-            onTertiary = Color.White,
-            tertiaryContainer = lerp(accent.lightPrimaryContainer, LightSurface, 0.7f),
-            onTertiaryContainer = lerp(primary, Color.Black, 0.5f),
-            background = LightBackground,
-            onBackground = TextPrimary,
-            surface = LightSurface,
-            onSurface = TextPrimary,
-            surfaceVariant = LightSurfaceVariant,
-            onSurfaceVariant = TextSecondary,
+            onSecondary = readableOn(accent.lightSecondary),
+            secondaryContainer = accent.lightPrimaryContainer,
+            onSecondaryContainer = lerp(primary, Color.Black, 0.55f),
+            tertiary = accent.lightSecondary,
+            onTertiary = readableOn(accent.lightSecondary),
+            tertiaryContainer = accent.lightPrimaryContainer,
+            onTertiaryContainer = lerp(primary, Color.Black, 0.55f),
+            background = c.groupedBackground,
+            onBackground = c.label,
+            surface = c.surface,
+            onSurface = c.label,
+            surfaceVariant = Color(0xFFE9E9EE),
+            onSurfaceVariant = c.secondaryLabel,
             surfaceTint = primary,
-            inverseSurface = Color(0xFF2C2C2C),
-            inverseOnSurface = LightBackground,
+            inverseSurface = Color(0xFF1C1C1E),
+            inverseOnSurface = Color(0xFFF2F2F7),
             inversePrimary = accent.darkPrimary,
-            outline = Color(0xFF8A8680),
-            outlineVariant = Color(0xFFD8D4CC),
-            surfaceBright = LightSurface,
-            surfaceDim = Color(0xFFE6E2DA),
-            surfaceContainerLowest = LightSurface,
-            surfaceContainerLow = Color(0xFFF9F7F3),
-            surfaceContainer = Color(0xFFF3F0EA),
-            surfaceContainerHigh = LightSurfaceVariant,
-            surfaceContainerHighest = Color(0xFFEAE6DF)
+            error = c.destructive,
+            onError = Color.White,
+            errorContainer = Color(0xFFFFE3E0),
+            onErrorContainer = Color(0xFF8C0010),
+            outline = Color(0xFF8E8E93),
+            outlineVariant = Color(0xFFD1D1D6),
+            scrim = Color.Black,
+            surfaceBright = c.surface,
+            surfaceDim = Color(0xFFE5E5EA),
+            surfaceContainerLowest = c.surface,
+            surfaceContainerLow = c.surface,
+            surfaceContainer = c.surface,
+            surfaceContainerHigh = Color(0xFFF7F7FA),
+            surfaceContainerHighest = c.surface
         )
     }
+}
