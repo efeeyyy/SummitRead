@@ -2,7 +2,6 @@ package com.example.summitread.platform
 
 import com.example.summitread.data.ImageStorage
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSURL
@@ -24,7 +23,7 @@ class IosImageStorage : ImageStorage {
 
     /** [sourceUri] is a `file://` URL string or a plain file path. */
     override suspend fun copyToStorage(sourceUri: String, prefix: String): String? =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val source = if (sourceUri.startsWith("file:")) NSURL.URLWithString(sourceUri) else NSURL.fileURLWithPath(sourceUri)
             if (source == null) return@withContext null
             val destination = imagesDirectory() + "/${prefix}_${NSUUID().UUIDString}.jpg"
@@ -39,6 +38,6 @@ class IosImageStorage : ImageStorage {
 
     override suspend fun deleteAll(paths: Collection<String?>) {
         if (paths.isEmpty()) return
-        withContext(Dispatchers.IO) { paths.forEach(::delete) }
+        withContext(ioDispatcher) { paths.forEach(::delete) }
     }
 }

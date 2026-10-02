@@ -8,7 +8,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
-import kotlinx.coroutines.Dispatchers
+import com.example.summitread.platform.ioDispatcher
 
 /** File name of the SQLite database. Must never change: existing Android installs keep their data here. */
 const val DATABASE_NAME = "summitread_database"
@@ -76,7 +76,7 @@ val MIGRATION_4_5: Migration = object : Migration(4, 5) {
 fun buildAppDatabase(builder: RoomDatabase.Builder<AppDatabase>): AppDatabase =
     builder
         .setDriver(BundledSQLiteDriver())
-        .setQueryCoroutineContext(Dispatchers.IO)
+        .setQueryCoroutineContext(ioDispatcher)
         .addMigrations(MIGRATION_4_5)
         // Only versions 1-3 (never shipped) fall back to a wipe; 4 -> 5 keeps all data.
         .fallbackToDestructiveMigration(dropAllTables = false)

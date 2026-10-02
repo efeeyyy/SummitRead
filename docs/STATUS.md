@@ -1,5 +1,7 @@
 # SummitRead — Devir notu (STATUS)
 
+> **`kmp` dalı (2026-10-02): KMP Aşama A tamam.** `shared` modülü (Room KMP, DataStore KMP, repository, ViewModel'ler, saf mantık, platform arayüzleri) + ince `app`. Android emülatörde yükseltme testi geçti (veri korundu). Ayrıntı, sürümler, Aşama B/C planı: `docs/KMP-PLAN.md`. Aşağıdaki yollar (`app\...\data\`, `app\schemas`) KMP öncesi; artık `shared\src\commonMain\...` ve `shared\schemas`.
+
 ## Güncel durum — 2026-10-02 sabah (yönetici özeti)
 
 **Android sürümü tamam ve emülatörde doğrulandı** (`main`). Ayrıntılı geçmiş aşağıda ve `docs/` altındaki raporlarda.
