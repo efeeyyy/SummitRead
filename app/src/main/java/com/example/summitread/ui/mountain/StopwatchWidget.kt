@@ -116,7 +116,7 @@ fun StopwatchWidget(
                 text = time,
                 style = AppType.LargeTitle.copy(fontSize = 48.sp, lineHeight = 56.sp, fontWeight = FontWeight.SemiBold)
                     .tabularNumbers(),
-                color = if (shownMillis > 0L) colors.label else colors.tertiaryLabel,
+                color = if (shownMillis > 0L) colors.label else colors.secondaryLabel,
                 maxLines = 1,
                 modifier = Modifier
                     .padding(top = AppSpacing.xxs)
@@ -196,7 +196,7 @@ fun StopwatchWidget(
             Column(modifier = Modifier.padding(top = AppSpacing.sm)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
                     MountainChip(
-                        text = "Suggested: $suggested pages",
+                        text = "Suggested: ${pagesLabel(suggested)}",
                         leadingIcon = Icons.Rounded.AutoAwesome
                     )
                 }
@@ -207,7 +207,7 @@ fun StopwatchWidget(
                     modifier = Modifier.padding(top = 6.dp)
                 )
                 PillButton(
-                    text = "Use $suggested pages",
+                    text = "Use ${pagesLabel(suggested)}",
                     onClick = { onUseSuggestion(suggested) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -266,3 +266,6 @@ private fun LiveDot() {
         Box(Modifier.size(8.dp).background(color, CircleShape))
     }
 }
+
+/** "1 page" / "12 pages". */
+private fun pagesLabel(count: Int): String = if (count == 1) "1 page" else "$count pages"

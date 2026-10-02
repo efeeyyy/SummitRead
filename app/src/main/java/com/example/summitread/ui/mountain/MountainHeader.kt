@@ -84,8 +84,8 @@ internal fun MountainHeader(
             Modifier
                 .fillMaxWidth()
                 .height(statusTop + HeaderBodyHeight)
-                .graphicsLayer { alpha = collapse().coerceIn(0f, 1f) }
-                .glassBackground(glass)
+                .graphicsLayer { alpha = barAlpha(collapse()) }
+                .glassBackground(glass, thickness = GlassThickness.Regular)
         ) {
             Box(
                 Modifier
@@ -124,7 +124,7 @@ internal fun MountainHeader(
                 Box(
                     Modifier
                         .matchParentSize()
-                        .graphicsLayer { alpha = 1f - collapse().coerceIn(0f, 1f) }
+                        .graphicsLayer { alpha = 1f - barAlpha(collapse()) }
                         .glassBackground(glass, CircleShape, GlassThickness.Thin)
                 )
                 Column(
@@ -158,7 +158,7 @@ internal fun MountainHeader(
                 Box(
                     Modifier
                         .matchParentSize()
-                        .graphicsLayer { alpha = 1f - collapse().coerceIn(0f, 1f) }
+                        .graphicsLayer { alpha = 1f - barAlpha(collapse()) }
                         .glassBackground(glass, CircleShape, GlassThickness.Thin)
                 )
                 Row(
@@ -222,7 +222,7 @@ private fun GlassIconButton(
         Box(
             Modifier
                 .size(40.dp)
-                .graphicsLayer { alpha = 1f - collapse().coerceIn(0f, 1f) }
+                .graphicsLayer { alpha = 1f - barAlpha(collapse()) }
                 .glassBackground(glass, CircleShape, GlassThickness.Thin)
         )
         IconCircleButton(
@@ -231,8 +231,15 @@ private fun GlassIconButton(
             onClick = onClick,
             style = IconButtonStyle.Plain,
             size = 40.dp,
+            reserveTouchTarget = false,
             tint = tint
         )
     }
 }
 
+
+/**
+ * The bar material and the floating capsules cross-fade in the first third of the scroll, so the (blurred) bar is
+ * fully opaque long before the canvas art is gone and the title never sits on bare artwork.
+ */
+private fun barAlpha(collapse: Float): Float = (collapse * 3f).coerceIn(0f, 1f)

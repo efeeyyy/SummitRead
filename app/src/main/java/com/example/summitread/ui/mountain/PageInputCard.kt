@@ -157,7 +157,7 @@ fun PageInputCard(
 
         if (totalPages > 0 && value > pagesLeft) {
             Text(
-                text = if (pagesLeft > 0) "Only $pagesLeft pages left, extra pages are ignored."
+                text = if (pagesLeft > 0) "Only $pagesLeft ${if (pagesLeft == 1) "page" else "pages"} left, extra pages are ignored."
                 else "Every page is already read.",
                 style = AppType.Footnote,
                 color = colors.warning,

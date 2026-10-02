@@ -49,6 +49,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -169,7 +170,8 @@ fun MountainScreen(
 
     // Status bar icons follow the sky behind them (the canvas runs under the status bar); restored on leave
     var skyIsLight by remember { mutableStateOf<Boolean?>(null) }
-    StatusBarIconsFollowSky(skyIsLight)
+    // Scrolled past the canvas the status bar sits on the glass header, which follows the app theme, not the sky
+    var overGlassHeader by remember { mutableStateOf(false) }
 
     // 3D book opening (#4): the content swings open around the left (spine) edge while the shared bounds move
     val bookClosed by animatedVisibilityScope.transition.animateFloat(
@@ -179,6 +181,7 @@ fun MountainScreen(
 
     val colors = AppTheme.colors
     val dark = colors.isDark
+    StatusBarIconsFollowSky(if (overGlassHeader && !isFocusMode) !dark else skyIsLight, isFocusMode)
     val book = activeBook
 
     Box(
@@ -214,6 +217,7 @@ fun MountainScreen(
                     (scrollState.value / (canvasHeightPx - headerPx).coerceAtLeast(1f)).coerceIn(0f, 1f)
                 }
             }
+            LaunchedEffect(collapse) { snapshotFlow { collapse.value > 0.5f }.collect { overGlassHeader = it } }
 
             // Keyboard open: keep the list tight above it; closed: leave room for the floating tab bar
             val ime = WindowInsets.ime
@@ -317,6 +321,14 @@ fun MountainScreen(
                                 NoteCard(
                                     note = note,
                                     onDelete = null,
+                                    modifier = Modifier.padding(horizontal = AppSpacing.screenHorizontal)
+                                )
+                            }
+                            if (notes.isEmpty()) {
+                                Text(
+                                    text = "No notes yet — tap Add note to capture a thought.",
+                                    style = AppType.Subheadline,
+                                    color = colors.secondaryLabel,
                                     modifier = Modifier.padding(horizontal = AppSpacing.screenHorizontal)
                                 )
                             }
@@ -488,10 +500,11 @@ private fun Context.findActivity(): Activity? {
 
 /**
  * The canvas is full-bleed, so the status bar sits on the sky: dark icons on a light sky, light icons on a dark
- * one. The previous appearance is restored when the screen is left.
+ * one (also in focus mode); over the glass header it follows the app theme. [light] = the surface behind the
+ * icons is light. The previous appearance is restored when the screen is left.
  */
 @Composable
-private fun StatusBarIconsFollowSky(light: Boolean?) {
+private fun StatusBarIconsFollowSky(light: Boolean?, reapplyKey: Any? = null) {
     val view = LocalView.current
     DisposableEffect(view) {
         val window = view.context.findActivity()?.window
@@ -501,7 +514,7 @@ private fun StatusBarIconsFollowSky(light: Boolean?) {
             if (controller != null && original != null) controller.isAppearanceLightStatusBars = original
         }
     }
-    DisposableEffect(view, light) {
+    DisposableEffect(view, light, reapplyKey) {
         if (light != null) {
             val window = view.context.findActivity()?.window
             if (window != null) WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = light

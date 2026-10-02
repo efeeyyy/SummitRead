@@ -23,6 +23,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -72,9 +81,9 @@ fun CalendarStrip(
         sessions.map { startOfDay(it.date) }.toSet()
     }
 
-    val listState = rememberLazyListState()
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = PAST_DAYS - 2)
     LaunchedEffect(today) {
-        listState.animateScrollToItem(PAST_DAYS, scrollOffset = -200)
+        listState.animateScrollToItem(PAST_DAYS - 2)
     }
 
     val dayOfWeekFormat = remember { SimpleDateFormat("EEE", Locale.getDefault()) }
@@ -85,7 +94,7 @@ fun CalendarStrip(
         state = listState,
         contentPadding = PaddingValues(horizontal = AppSpacing.screenHorizontal),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = modifier
+        modifier = modifier.edgeFade(AppSpacing.screenHorizontal)
     ) {
         itemsIndexed(days, key = { _, day -> day }) { _, dayMillis ->
             val isToday = dayMillis == today
@@ -175,3 +184,27 @@ fun CalendarStrip(
         }
     }
 }
+
+/**
+ * Fades the outer [width] on both sides, so days scrolled under the content padding dissolve instead of showing
+ * as a clipped sliver at the screen edge.
+ */
+private fun Modifier.edgeFade(width: Dp): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val w = width.toPx()
+        drawRect(
+            brush = Brush.horizontalGradient(listOf(Color.Transparent, Color.Black), startX = 0f, endX = w),
+            size = Size(w, size.height),
+            blendMode = BlendMode.DstIn
+        )
+        drawRect(
+            brush = Brush.horizontalGradient(
+                listOf(Color.Black, Color.Transparent), startX = size.width - w, endX = size.width
+            ),
+            topLeft = Offset(size.width - w, 0f),
+            size = Size(w, size.height),
+            blendMode = BlendMode.DstIn
+        )
+    }
