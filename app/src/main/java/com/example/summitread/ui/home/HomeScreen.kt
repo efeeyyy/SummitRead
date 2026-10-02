@@ -65,12 +65,13 @@ fun HomeScreen(
     val viewModel: HomeViewModel = viewModel(
         factory = HomeViewModel.factory(bookRepository, userPreferences)
     )
-    val allBooks by viewModel.allBooks.collectAsStateWithLifecycle()
+    val booksOrNull by viewModel.books.collectAsStateWithLifecycle()
+    val allBooks = booksOrNull.orEmpty()
     val archivedBooks by viewModel.archivedBooks.collectAsStateWithLifecycle()
-    val booksLoaded by viewModel.booksLoaded.collectAsStateWithLifecycle()
     val sortOption by viewModel.sortOption.collectAsStateWithLifecycle()
     // null until DataStore answered, so the wrong view is not flashed first.
     val listViewPref by userPreferences.isListView.collectAsStateWithLifecycle<Boolean?>(initialValue = null)
+    val body = homeBody(booksOrNull, listViewPref)
     val currentStreak by viewModel.currentStreak.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
@@ -179,9 +180,9 @@ fun HomeScreen(
                 contentPadding = listPadding
             )
 
-            !booksLoaded || listViewPref == null -> Box(modifier = Modifier.fillMaxSize())
+            body == HomeBody.LOADING -> Box(modifier = Modifier.fillMaxSize())
 
-            allBooks.isEmpty() -> Box(modifier = Modifier.fillMaxSize()) {
+            body == HomeBody.EMPTY -> Box(modifier = Modifier.fillMaxSize()) {
                 HomeEmptyState(
                     icon = Icons.Rounded.AutoStories,
                     title = stringResource(R.string.empty_library_title),
@@ -251,8 +252,8 @@ fun HomeScreen(
 
         val archiveTarget = archiveTargetId?.let { id -> allBooks.firstOrNull { it.id == id } }
         // The book vanished (e.g. archived elsewhere): forget the pending confirmation once data is loaded.
-        LaunchedEffect(archiveTarget, booksLoaded) {
-            if (archiveTarget == null && booksLoaded && archiveTargetId != null) archiveTargetId = null
+        LaunchedEffect(archiveTarget, booksOrNull != null) {
+            if (archiveTarget == null && booksOrNull != null && archiveTargetId != null) archiveTargetId = null
         }
         if (archiveTarget != null) {
             ArchiveConfirmDialog(

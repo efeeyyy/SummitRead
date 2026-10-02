@@ -35,17 +35,14 @@ class HomeViewModel(
         .catch { emit(SortOption.MANUAL) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SortOption.MANUAL)
 
-    /** Shelf/list books (archived books are excluded), sorted by [sortOption]. */
-    val allBooks: StateFlow<List<BookEntity>> = repository.allBooks
-        .combine(sortOption) { books, option -> sortBooks(books, option) }
+    /**
+     * Shelf/list books (archived books are excluded), sorted by [sortOption]. null until the first database
+     * emission: this single value is both the data and the "loaded" signal (see [homeBody]).
+     */
+    val books: StateFlow<List<BookEntity>?> = repository.allBooks
+        .combine(sortOption) { books, option -> sortBooks(books, option) as List<BookEntity>? }
         .catch { emit(emptyList()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    /** False until the first database emission, so the UI can avoid flashing the empty-shelf message. */
-    val booksLoaded: StateFlow<Boolean> = repository.allBooks
-        .map { true }
-        .catch { emit(true) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     /** Archived books (history is kept); empty unless something was archived. */
     val archivedBooks: StateFlow<List<BookEntity>> = repository.archivedBooks
