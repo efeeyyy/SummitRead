@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -70,15 +71,24 @@ class ProfileViewModel(
         .catch { emit(0) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    val totalPagesRead: StateFlow<Int> = repository.totalPagesRead
+    /**
+     * Pages actually read: sum of every book's progress (shelf + archived), clamped to totalPages.
+     * Not the sum of session pages, which can exceed book progress for legacy data.
+     */
+    val totalPagesRead: StateFlow<Int> = combine(repository.allBooks, repository.archivedBooks) { active, archived ->
+        ProfileLogic.pagesRead(active + archived)
+    }
         .catch { emit(0) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     /** ClimbTime (#35, as requested): total pages x 1.5 minutes, e.g. "1 Days, 3 Hours Climbed". */
-    val totalTimeRead: StateFlow<String> = repository.totalPagesRead
+    val totalTimeRead: StateFlow<String> = totalPagesRead
         .map { pages -> formatClimbTime(pages) }
-        .catch { emit(formatClimbTime(0)) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), formatClimbTime(0))
+
+    val currentStreak: StateFlow<Int> = repository.currentStreak
+        .catch { emit(0) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     /** Real total timed reading (sum of all stopwatch sessions) in millis; separate from the ClimbTime estimate. */
     val totalTimedReadMillis: StateFlow<Long> = repository.totalTimeReadMillis

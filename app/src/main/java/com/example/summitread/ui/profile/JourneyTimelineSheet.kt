@@ -1,37 +1,42 @@
 package com.example.summitread.ui.profile
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.data.db.NoteEntity
 import com.example.summitread.data.db.ReadingSessionEntity
 import com.example.summitread.data.db.RelicEntity
+import com.example.summitread.theme.AppShapes
+import com.example.summitread.theme.AppSpacing
+import com.example.summitread.theme.AppTheme
+import com.example.summitread.theme.AppType
+import com.example.summitread.ui.components.AppSheet
+import com.example.summitread.ui.components.CardContainer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,8 +45,8 @@ import java.util.Locale
  * Book Journey (#40/#41): book facts, completion date, total time, Summit Logbook review and
  * rating, then the chronological sessions with the notes that belong to each session.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun JourneyTimelineSheet(
     relic: RelicEntity,
     book: BookEntity?,
@@ -51,7 +56,7 @@ fun JourneyTimelineSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val colors = AppTheme.colors
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
     val sortedSessions = remember(sessions) { ProfileLogic.sortedSessions(sessions) }
     val grouped = remember(sessions, notes) { ProfileLogic.groupNotes(sessions, notes) }
@@ -59,38 +64,34 @@ fun JourneyTimelineSheet(
     val otherNotes = grouped.second
     val completedAt = book?.completedAtMillis ?: relic.dateEarned
     val title = book?.title?.takeIf { it.isNotBlank() } ?: relic.title
+    val author = book?.author.orEmpty()
 
-    ModalBottomSheet(
+    AppSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        title = "Journey",
+        containerColor = colors.groupedBackground,
         modifier = modifier
     ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(bottom = AppSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.md)
         ) {
-            item {
-                Column {
+            item(key = "summary") {
+                CardContainer(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "${relic.emoji} $title",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        style = AppType.Title2,
+                        color = colors.label
                     )
-                    val author = book?.author.orEmpty()
                     if (author.isNotBlank()) {
-                        Text(
-                            text = "by $author",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text("by $author", style = AppType.Subheadline, color = colors.secondaryLabel)
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(AppSpacing.sm))
                     Text(
-                        text = "Completed: ${dateFormat.format(Date(completedAt))}",
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Summit reached ${dateFormat.format(Date(completedAt))}",
+                        style = AppType.Subheadline,
+                        color = colors.gold
                     )
                     Text(
                         text = if (totalTimeMillis > 0) {
@@ -98,76 +99,76 @@ fun JourneyTimelineSheet(
                         } else {
                             "Total time spent: no timed sessions"
                         },
-                        style = MaterialTheme.typography.bodyMedium
+                        style = AppType.Subheadline,
+                        color = colors.secondaryLabel
                     )
                 }
             }
 
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Summit Logbook",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = if (relic.rating > 0f) {
-                                "Rating: ${"★".repeat(relic.rating.toInt().coerceIn(0, 5))} (${relic.rating.toInt()} / 5)"
-                            } else {
-                                "Not rated"
-                            },
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = if (relic.review.isNotEmpty()) "\"${relic.review}\"" else "No review written.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
+            item(key = "logbook") {
+                CardContainer(modifier = Modifier.fillMaxWidth()) {
+                    Text("Summit Logbook", style = AppType.Footnote, color = colors.secondaryLabel)
+                    Spacer(Modifier.height(AppSpacing.xxs))
+                    Text(
+                        text = if (relic.rating > 0f) {
+                            "Rating: ${"★".repeat(relic.rating.toInt().coerceIn(0, 5))} (${relic.rating.toInt()} / 5)"
+                        } else {
+                            "Not rated"
+                        },
+                        style = AppType.Headline,
+                        color = if (relic.rating > 0f) colors.gold else colors.label
+                    )
+                    Spacer(Modifier.height(AppSpacing.xxs))
+                    Text(
+                        text = if (relic.review.isNotEmpty()) "\"${relic.review}\"" else "No review written.",
+                        style = AppType.Body,
+                        color = colors.label
+                    )
                 }
             }
 
-            item {
+            item(key = "timeline_header") {
                 Text(
                     text = "Chronological Timeline",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            items(sortedSessions, key = { "session_${it.id}" }) { session ->
-                TimelineItem(
-                    session = session,
-                    notes = notesBySession[session.id].orEmpty(),
-                    dateFormat = dateFormat
+                    style = AppType.Title3,
+                    color = colors.label,
+                    modifier = Modifier
+                        .padding(start = AppSpacing.xs, top = AppSpacing.xs)
+                        .semantics { heading() }
                 )
             }
 
             if (sortedSessions.isEmpty()) {
-                item {
+                item(key = "no_sessions") {
                     Text(
                         text = "No recorded sessions.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = AppType.Subheadline,
+                        color = colors.secondaryLabel,
+                        modifier = Modifier.padding(start = AppSpacing.xs)
+                    )
+                }
+            } else {
+                itemsIndexed(sortedSessions, key = { _, s -> "session_${s.id}" }) { index, session ->
+                    TimelineItem(
+                        session = session,
+                        notes = notesBySession[session.id].orEmpty(),
+                        dateFormat = dateFormat,
+                        isFirst = index == 0,
+                        isLast = index == sortedSessions.lastIndex,
+                        summit = index == sortedSessions.lastIndex && book?.isCompleted == true
                     )
                 }
             }
 
             if (otherNotes.isNotEmpty()) {
-                item {
+                item(key = "other_header") {
                     Text(
                         text = "Other notes",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 8.dp)
+                        style = AppType.Title3,
+                        color = colors.label,
+                        modifier = Modifier
+                            .padding(start = AppSpacing.xs, top = AppSpacing.xs)
+                            .semantics { heading() }
                     )
                 }
                 items(otherNotes, key = { "note_${it.id}" }) { note ->
@@ -179,68 +180,81 @@ fun JourneyTimelineSheet(
 }
 
 @Composable
-private fun NoteLine(note: NoteEntity) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier
+private fun NoteLine(note: NoteEntity, modifier: Modifier = Modifier) {
+    Text(
+        text = "Note on pg ${note.pageNumber}: ${note.content}",
+        style = AppType.Footnote,
+        color = AppTheme.colors.label,
+        modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 2.dp)
-    ) {
-        Text(
-            text = "Note on pg ${note.pageNumber}: ${note.content}",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(8.dp)
-        )
-    }
+            .clip(AppShapes.small)
+            .background(AppTheme.colors.fill)
+            .padding(AppSpacing.sm)
+    )
 }
 
+/** One session row on a vertical rail: dot (gold for the completing summit) + connecting line. */
 @Composable
 private fun TimelineItem(
     session: ReadingSessionEntity,
     notes: List<NoteEntity>,
-    dateFormat: SimpleDateFormat
+    dateFormat: SimpleDateFormat,
+    isFirst: Boolean,
+    isLast: Boolean,
+    summit: Boolean
 ) {
-    Row(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(40.dp)
+    val colors = AppTheme.colors
+    val dotColor = if (summit) colors.gold else colors.tint
+    val lineColor = colors.separator
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+    ) {
+        Canvas(
+            modifier = Modifier
+                .width(28.dp)
+                .fillMaxHeight()
         ) {
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
-            )
-            Box(
-                modifier = Modifier
-                    .width(2.dp)
-                    .height(40.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
+            val cx = size.width / 2f
+            val dotY = 14.dp.toPx()
+            val stroke = 2.dp.toPx()
+            if (!isFirst) drawLine(lineColor, Offset(cx, 0f), Offset(cx, dotY), stroke)
+            if (!isLast) drawLine(lineColor, Offset(cx, dotY), Offset(cx, size.height), stroke)
+            drawCircle(dotColor, radius = if (summit) 7.dp.toPx() else 5.dp.toPx(), center = Offset(cx, dotY))
         }
-
-        Column(modifier = Modifier
-            .weight(1f)
-            .padding(bottom = 8.dp)) {
-            Text(
-                text = dateFormat.format(Date(session.date)),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = if (session.pagesRead == 1) "Read 1 page" else "Read ${session.pagesRead} pages",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            if (session.timeSpentMillis > 0) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(bottom = AppSpacing.sm)
+        ) {
+            CardContainer(
+                modifier = Modifier.fillMaxWidth(),
+                shape = AppShapes.medium
+            ) {
                 Text(
-                    text = "Time spent: ${ProfileLogic.formatTimedDuration(session.timeSpentMillis)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary
+                    text = dateFormat.format(Date(session.date)),
+                    style = AppType.Footnote,
+                    color = if (summit) colors.gold else colors.secondaryLabel
                 )
-            }
-            if (notes.isNotEmpty()) {
-                Spacer(Modifier.height(4.dp))
-                notes.forEach { NoteLine(it) }
+                Text(
+                    text = if (session.pagesRead == 1) "Read 1 page" else "Read ${session.pagesRead} pages",
+                    style = AppType.Headline,
+                    color = colors.label
+                )
+                if (session.timeSpentMillis > 0) {
+                    Text(
+                        text = "Time spent: ${ProfileLogic.formatTimedDuration(session.timeSpentMillis)}",
+                        style = AppType.Footnote,
+                        color = colors.secondaryLabel
+                    )
+                }
+                if (notes.isNotEmpty()) {
+                    Spacer(Modifier.height(AppSpacing.xs))
+                    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
+                        notes.forEach { NoteLine(it) }
+                    }
+                }
             }
         }
     }
