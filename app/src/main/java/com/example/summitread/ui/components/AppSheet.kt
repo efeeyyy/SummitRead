@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.example.summitread.ui.components
 
 import androidx.compose.foundation.background
@@ -14,6 +16,8 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,6 +31,21 @@ import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
 
 /**
+ * State of an [AppSheet]. Opens fully expanded (no half-height detent) so forms are never clipped; call [hide]
+ * to slide the sheet away before removing it. Wraps the experimental Material state so callers need no opt-in.
+ */
+@Stable
+class AppSheetState internal constructor(internal val state: SheetState) {
+    suspend fun hide() = state.hide()
+}
+
+@Composable
+fun rememberAppSheetState(): AppSheetState {
+    val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    return remember(state) { AppSheetState(state) }
+}
+
+/**
  * iOS-style modal sheet: 28dp top corners, small grabber, elevated background, centred title.
  * The sheet lives in its own window, so it cannot blur the screen behind it; it uses the opaque
  * elevated surface instead (glass is for in-window bars only).
@@ -34,20 +53,19 @@ import com.example.summitread.theme.AppType
  * Use it instead of full-screen dialogs for forms and pickers. Content is a normal Column:
  * add [PillButton]s and [InsetGroupedSection]s directly.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     title: String? = null,
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    sheetState: AppSheetState = rememberAppSheetState(),
     containerColor: Color = AppTheme.colors.elevatedSurface,
     content: @Composable ColumnScope.() -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier,
-        sheetState = sheetState,
+        sheetState = sheetState.state,
         shape = AppShapes.sheet,
         containerColor = containerColor,
         contentColor = AppTheme.colors.label,

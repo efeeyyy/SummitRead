@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,7 +36,6 @@ import com.example.summitread.ui.components.PillStyle
 import com.example.summitread.ui.components.pressableScale
 
 /** Summit Logbook (#32): a 1 to 5 star rating and a review, shown as a sheet once the book is finished. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SummitLogbookDialog(
     bookTitle: String,

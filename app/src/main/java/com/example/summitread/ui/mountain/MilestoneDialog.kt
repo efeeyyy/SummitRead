@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -33,7 +32,6 @@ import java.util.Locale
  * Sheet opened by tapping a camp (25 / 50 / 75 %): a progress ring, a motivational line and the stats up to that
  * point in an iOS grouped list (#22).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MilestoneDialog(
     bookId: Long,
@@ -102,7 +100,6 @@ fun MilestoneDialog(
 }
 
 /** Shows the text of a note when its signpost on the trail is tapped. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteSignpostDialog(
     note: NoteEntity,

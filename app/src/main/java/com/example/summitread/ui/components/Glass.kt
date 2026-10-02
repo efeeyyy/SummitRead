@@ -45,11 +45,17 @@ val LocalBottomBarHeight = compositionLocalOf { 0.dp }
 /** Marks this content as the thing glass surfaces blur. Put it on the scrolling content. */
 fun Modifier.glassSource(state: GlassState): Modifier = hazeSource(state.haze)
 
-/** How strongly the material blurs / tints. */
+/**
+ * Material tokens, defined once for every glass surface (like the iOS system materials).
+ * - [Thin]: small floating controls over artwork (header capsules).
+ * - [Regular]: bars over scrolling content (tab bar, collapsed header): strong blur and a mostly opaque tint,
+ *   so text underneath is never readable.
+ * - [Thick]: overlays that must read as nearly solid.
+ */
 enum class GlassThickness(val blurDp: Float, val tintAlphaLight: Float, val tintAlphaDark: Float) {
-    Thin(blurDp = 16f, tintAlphaLight = 0.60f, tintAlphaDark = 0.45f),
-    Regular(blurDp = 24f, tintAlphaLight = 0.72f, tintAlphaDark = 0.55f),
-    Thick(blurDp = 32f, tintAlphaLight = 0.85f, tintAlphaDark = 0.70f)
+    Thin(blurDp = 24f, tintAlphaLight = 0.66f, tintAlphaDark = 0.55f),
+    Regular(blurDp = 40f, tintAlphaLight = 0.86f, tintAlphaDark = 0.80f),
+    Thick(blurDp = 48f, tintAlphaLight = 0.93f, tintAlphaDark = 0.90f)
 }
 
 /**
@@ -73,7 +79,7 @@ fun Modifier.glassBackground(
             backgroundColor = base,
             tint = HazeTint(base.copy(alpha = tintAlpha)),
             blurRadius = thickness.blurDp.dp,
-            noiseFactor = 0.02f
+            noiseFactor = 0f
         )
     }
     return this.clip(shape).hazeEffect(state = state.haze, style = style)

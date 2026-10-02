@@ -149,6 +149,7 @@ fun ProfileScreen(
                                 label = "ClimbTime",
                                 icon = Icons.Rounded.Timer,
                                 iconTint = AppTheme.colors.success,
+                                onClickLabel = "Explain ClimbTime",
                                 onClick = {
                                     haptics.light()
                                     showTimeExplanationDialog = true

@@ -62,12 +62,14 @@ fun StatTile(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     iconTint: Color = AppTheme.colors.tint,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    onClickLabel: String? = null
 ) {
     val colors = AppTheme.colors
     CardContainer(
         modifier = modifier.semantics(mergeDescendants = true) { },
         onClick = onClick,
+        onClickLabel = onClickLabel,
         contentPadding = PaddingValues(AppSpacing.md)
     ) {
         if (icon != null) {

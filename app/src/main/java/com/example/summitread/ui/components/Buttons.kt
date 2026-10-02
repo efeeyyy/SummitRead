@@ -70,12 +70,19 @@ fun PillButton(
     val haptics = rememberAppHaptics()
     val accent = if (destructive) colors.destructive else colors.tint
     val onAccent = if (destructive) Color.White else colors.onTint
-    val background = when (style) {
-        PillStyle.Filled -> accent
-        PillStyle.Tinted -> accent.copy(alpha = if (colors.isDark) 0.22f else 0.14f)
-        PillStyle.Plain -> Color.Transparent
+    // Disabled keeps legible contrast: neutral grey capsule + secondary label instead of a faded accent.
+    val background = when {
+        !enabled && style == PillStyle.Filled -> colors.tertiaryLabel.copy(alpha = 0.25f)
+        !enabled && style == PillStyle.Tinted -> colors.fill
+        style == PillStyle.Filled -> accent
+        style == PillStyle.Tinted -> accent.copy(alpha = if (colors.isDark) 0.22f else 0.14f)
+        else -> Color.Transparent
     }
-    val content = if (style == PillStyle.Filled) onAccent else accent
+    val content = when {
+        !enabled -> if (style == PillStyle.Filled) colors.secondaryLabel else colors.tertiaryLabel
+        style == PillStyle.Filled -> onAccent
+        else -> accent
+    }
     val height = if (size == PillSize.Large) 50.dp else 34.dp
     val horizontal = if (size == PillSize.Large) 24.dp else 16.dp
     val textStyle = if (size == PillSize.Large) AppType.Headline else AppType.Subheadline.copy(
@@ -86,7 +93,6 @@ fun PillButton(
     Box(
         modifier = modifier
             .then(if (size == PillSize.Small) Modifier.minimumInteractiveComponentSize() else Modifier)
-            .alpha(if (enabled) 1f else 0.4f)
             .pressScale(interaction, enabled = enabled)
             .defaultMinSize(minHeight = height)
             .clip(AppShapes.pill)
@@ -128,7 +134,10 @@ enum class IconButtonStyle {
 
 /**
  * Circular icon button. [contentDescription] is mandatory: icon-only controls must be labelled.
- * [size] is the visible circle; the touch target is always >= 48dp.
+ * [size] is the visible circle. With [reserveTouchTarget] (default) the layout slot is at least 48dp so the
+ * tappable area meets the minimum; set it false where the surrounding layout is fixed (a 44dp header row):
+ * the circle then takes exactly [size] and the tap area is still extended by Compose's touch slop.
+ * The whole slot is tappable, the press-scale only shrinks the visible circle.
  */
 @Composable
 fun IconCircleButton(
@@ -139,7 +148,8 @@ fun IconCircleButton(
     style: IconButtonStyle = IconButtonStyle.Tinted,
     size: androidx.compose.ui.unit.Dp = 36.dp,
     enabled: Boolean = true,
-    tint: Color = AppTheme.colors.tint
+    tint: Color = AppTheme.colors.tint,
+    reserveTouchTarget: Boolean = true
 ) {
     val colors = AppTheme.colors
     val interaction = remember { MutableInteractionSource() }
@@ -151,12 +161,7 @@ fun IconCircleButton(
     }
     Box(
         modifier = modifier
-            .minimumInteractiveComponentSize()
-            .alpha(if (enabled) 1f else 0.4f)
-            .pressScale(interaction, enabled = enabled)
-            .size(size)
-            .clip(AppShapes.pill)
-            .background(background)
+            .then(if (reserveTouchTarget) Modifier.minimumInteractiveComponentSize() else Modifier)
             .semantics { this.contentDescription = contentDescription }
             .clickable(
                 interactionSource = interaction,
@@ -170,7 +175,17 @@ fun IconCircleButton(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = null, tint = glyph, modifier = Modifier.size(size * 0.5f))
+        Box(
+            modifier = Modifier
+                .alpha(if (enabled) 1f else 0.4f)
+                .pressScale(interaction, enabled = enabled)
+                .size(size)
+                .clip(AppShapes.pill)
+                .background(background),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = glyph, modifier = Modifier.size(size * 0.5f))
+        }
     }
 }
 

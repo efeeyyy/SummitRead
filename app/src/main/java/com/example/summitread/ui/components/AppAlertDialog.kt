@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -60,6 +61,8 @@ data class AlertAction(
  * iOS alert: 280dp-wide centred panel, title + message, hairline-separated actions.
  * Two actions sit side by side, three or more stack. Prefer [AppSheet] for anything with inputs.
  *
+ * An optional [content] slot (centred, below the message) holds small custom bodies such as a stats list.
+ *
  * Every action must dismiss the dialog itself (set the state that shows it to false).
  */
 @Composable
@@ -67,7 +70,8 @@ fun AppAlertDialog(
     title: String,
     onDismissRequest: () -> Unit,
     actions: List<AlertAction>,
-    message: String? = null
+    message: String? = null,
+    content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -84,13 +88,18 @@ fun AppAlertDialog(
                 alpha = progress.coerceIn(0f, 1f)
             }
         ) {
-            AlertContent(title, message, actions)
+            AlertContent(title, message, actions, content)
         }
     }
 }
 
 @Composable
-private fun AlertContent(title: String, message: String?, actions: List<AlertAction>) {
+private fun AlertContent(
+    title: String,
+    message: String?,
+    actions: List<AlertAction>,
+    content: (@Composable ColumnScope.() -> Unit)? = null
+) {
     val colors = AppTheme.colors
     Column(
         Modifier
@@ -119,6 +128,7 @@ private fun AlertContent(title: String, message: String?, actions: List<AlertAct
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
+            if (content != null) content()
         }
         Hairline()
         if (actions.size == 2) {
