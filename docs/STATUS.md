@@ -1,5 +1,30 @@
 # SummitRead — Devir notu (STATUS)
 
+## Güncel durum — 2026-10-02 sabah (yönetici özeti)
+
+**Android sürümü tamam ve emülatörde doğrulandı** (`main`). Ayrıntılı geçmiş aşağıda ve `docs/` altındaki raporlarda.
+
+| Aşama | Sonuç | Belge |
+|---|---|---|
+| Kod incelemesi + 47 madde denetimi | 24 tam / 17 kısmi / 4 bozuk / 2 eksik bulundu | `reviews/`, `REQUIREMENTS-AUDIT.md` |
+| Parti 1 (veri/servis/VM) + Parti 2–4 (Dağ/Ana/Profil) | Tüm kısmi/bozuk/eksik maddeler kodlandı | aşağıda §1, `batch*-notes.md` |
+| DB v4→v5 göçü | Efe'nin Haziran verisiyle (Pixel_9a) doğrulandı, veri korunuyor. Yedek: `Desktop\Proje.B\SummitRead-emulator-yedek-2026-10-02` | — |
+| Emülatör E2E | Çökme/işlev hatası yok | `E2E-REPORT.md` |
+| Apple tarzı premium tasarım | Tasarım sistemi (Inter, iOS paleti, Haze cam, büyük başlık, cam tab bar, grouped listeler, sheet'ler) + 3 ekran | `DESIGN.md`, `redesign-*-notes.md` |
+| Görsel QA + polish | Profil dik tutulunca çökme (NaN eğim) düzeltildi; açılışta "kütüphane boş" yarışı düzeltildi; 15+ görsel düzeltme | `QA-REDESIGN.md` |
+
+Son kontrol: `assembleDebug testDebugUnitTest lintDebug` → BUILD SUCCESSFUL, 64 test, lint 0 hata.
+
+**Emülatör notu:** `medium_phone` AVD (Android 16) adb'de hep "offline" kalıyor → testlerde **Pixel_9a** (Android 15) kullan.
+
+**Kararlar (Efe, 2026-10-02):** iOS için Kotlin Multiplatform + Compose Multiplatform; Mac yok; iPhone'a ücretsiz Apple ID + Sideloadly/AltStore ile kurulum (TestFlight yok); iOS 27 uyumu hedef; bildirim izni açılışta sorulsun; 47 maddeye birebir bağlı kalmak zorunlu değil.
+
+**Sıradaki aşama:** KMP dönüşümü `kmp` dalında (main'e dokunmadan). iOS derlemesi Mac gerektirir → GitHub Actions macOS; repo'yu GitHub'a yüklemek Efe'yle konuşulacak.
+
+---
+
+## Parti 1 ayrıntısı (2026-10-01)
+
 Son güncelleme: 2026-10-01 — "Adım 0 + Parti 1" (çekirdek veri / servis / ViewModel katmanı) tamamlandı.
 Referans: `docs\REQUIREMENTS-AUDIT.md` (durum tablosu + parti planı), `docs\REQUIREMENTS.md`, `docs\reviews\*`.
 Yol kısaltması: `S/` = `app\src\main\java\com\example\summitread\`.
