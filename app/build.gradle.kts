@@ -2,7 +2,6 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
-  alias(libs.plugins.ksp)
 }
 
 android {
@@ -12,7 +11,7 @@ android {
         applicationId = "com.example.summitread"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0"
     }
     buildTypes {
@@ -40,14 +39,14 @@ kotlin {
     jvmToolchain(17)
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
 
 dependencies {
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
   androidTestImplementation(composeBom)
+
+  // Shared KMP module: data (Room/DataStore), repository, view models, pure logic, platform interfaces
+  implementation(project(":shared"))
 
   // Core
   coreLibraryDesugaring(libs.desugar.jdk.libs)
@@ -78,16 +77,10 @@ dependencies {
   // WorkManager
   implementation(libs.androidx.work.runtime.ktx)
 
-  // Room
-  implementation(libs.room.runtime)
-  implementation(libs.room.ktx)
-  ksp(libs.room.compiler)
 
   // Coil
   implementation(libs.coil.compose)
 
-  // DataStore
-  implementation(libs.datastore.preferences)
 
   // Tests
   testImplementation(libs.junit)

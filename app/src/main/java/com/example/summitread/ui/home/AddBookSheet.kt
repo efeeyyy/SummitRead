@@ -52,7 +52,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.summitread.R
-import com.example.summitread.data.ImageStorage
+import com.example.summitread.platform.AndroidAppContainer
 import com.example.summitread.theme.AccentColor
 import com.example.summitread.theme.AppShapes
 import com.example.summitread.theme.AppSpacing
@@ -105,6 +105,7 @@ fun AddBookSheet(
     val hsv = Hsv(hue, saturation, brightness)
 
     val context = LocalContext.current
+    val imageStorage = remember(context) { AndroidAppContainer.get(context).imageStorage }
     val scope = rememberCoroutineScope()
     val sheetState = rememberAppSheetState()
 
@@ -113,9 +114,9 @@ fun AddBookSheet(
     ) { uri ->
         if (uri != null) {
             scope.launch {
-                val copied = ImageStorage.copyImageToInternalStorage(context, uri, "cover")
+                val copied = imageStorage.copyToStorage(uri.toString(), "cover")
                 if (copied != null) {
-                    ImageStorage.delete(coverImagePath) // replaced selection: drop the earlier copy
+                    imageStorage.delete(coverImagePath) // replaced selection: drop the earlier copy
                     coverImagePath = copied
                 }
             }
@@ -129,7 +130,7 @@ fun AddBookSheet(
 
     // Called when the sheet was already swiped / tapped away.
     fun dismissed() {
-        if (!saving) ImageStorage.delete(coverImagePath) // not saved: do not leave the copied cover behind
+        if (!saving) imageStorage.delete(coverImagePath) // not saved: do not leave the copied cover behind
         onDismissRequest()
     }
 
@@ -186,7 +187,7 @@ fun AddBookSheet(
                         PillButton(
                             text = stringResource(R.string.remove_cover),
                             onClick = {
-                                ImageStorage.delete(coverImagePath)
+                                imageStorage.delete(coverImagePath)
                                 coverImagePath = null
                             },
                             style = PillStyle.Plain,

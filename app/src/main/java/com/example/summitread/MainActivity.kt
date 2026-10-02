@@ -14,15 +14,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.example.summitread.data.BookRepository
 import com.example.summitread.data.ThemeMode
-import com.example.summitread.data.UserPreferences
-import com.example.summitread.data.db.AppDatabase
+import com.example.summitread.platform.AndroidAppContainer
 import com.example.summitread.theme.AccentColor
 import com.example.summitread.theme.SummitReadTheme
 import androidx.lifecycle.lifecycleScope
 import com.example.summitread.notifications.NotificationChannels
-import com.example.summitread.worker.StreakReminderScheduler
+import com.example.summitread.platform.StreakReminders
+import com.example.summitread.worker.WorkManagerReminderScheduler
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
@@ -32,9 +31,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val db = AppDatabase.getInstance(applicationContext)
-        val bookRepository = BookRepository(db.bookDao())
-        val userPreferences = UserPreferences(applicationContext)
+        val container = AndroidAppContainer.get(applicationContext)
+        val bookRepository = container.repository
+        val userPreferences = container.preferences
 
         val requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -54,7 +53,12 @@ class MainActivity : ComponentActivity() {
 
         NotificationChannels.ensureCreated(applicationContext)
         // 6h / 1h streak-rescue reminders: rescheduled after every log and when the preference changes.
-        StreakReminderScheduler.observe(lifecycleScope, applicationContext, bookRepository, userPreferences)
+        StreakReminders.observe(
+            lifecycleScope,
+            bookRepository,
+            userPreferences,
+            WorkManagerReminderScheduler(applicationContext)
+        )
 
         enableEdgeToEdge()
         setContent {

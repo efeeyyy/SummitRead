@@ -11,17 +11,17 @@ import androidx.work.WorkerParameters
 import com.example.summitread.MainActivity
 import com.example.summitread.R
 import com.example.summitread.data.StreakCalculator
-import com.example.summitread.data.UserPreferences
-import com.example.summitread.data.db.AppDatabase
 import com.example.summitread.notifications.NotificationChannels
+import com.example.summitread.platform.AndroidAppContainer
+import com.example.summitread.platform.StreakReminderTexts
 import kotlinx.coroutines.flow.first
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZonedDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.math.abs
+import kotlin.time.Clock
 
 /**
- * Fires one "streak is about to reset" notification (scheduled by [StreakReminderScheduler]).
+ * Fires one "streak is about to reset" notification (scheduled by [WorkManagerReminderScheduler]).
  * It re-validates everything at fire time, so a stale or late run never shows a wrong reminder.
  */
 class StreakNotificationWorker(
@@ -36,19 +36,20 @@ class StreakNotificationWorker(
         if (resetAtMillis == 0L || hoursBefore == 0) return Result.success()
 
         val context = applicationContext
-        if (!UserPreferences(context).notificationsEnabled.first()) return Result.success()
+        val container = AndroidAppContainer.get(context)
+        if (!container.preferences.notificationsEnabled.first()) return Result.success()
         if (!NotificationChannels.canPost(context)) return Result.success()
 
-        val days = AppDatabase.getInstance(context).bookDao().getLoggedDaysOnce()
-            .mapTo(HashSet<LocalDate>()) { StreakCalculator.toLocalDate(it) }
-        val now = ZonedDateTime.now()
-        val today = now.toLocalDate()
+        val days = container.repository.getLoggedDaysOnce()
+        val zone = TimeZone.currentSystemDefault()
+        val now = Clock.System.now()
+        val today = now.toLocalDateTime(zone).date
 
-        val reset = StreakCalculator.resetMoment(days, today, now.zone) ?: return Result.success()
-        val resetMillis = reset.toInstant().toEpochMilli()
+        val reset = StreakCalculator.resetMoment(days, today, zone) ?: return Result.success()
+        val resetMillis = reset.toEpochMilliseconds()
         // The streak moved on (pages were logged since scheduling) or the reset has already passed.
         if (abs(resetMillis - resetAtMillis) > STALE_TOLERANCE_MILLIS) return Result.success()
-        if (!Instant.now().isBefore(reset.toInstant())) return Result.success()
+        if (now >= reset) return Result.success()
 
         val streak = StreakCalculator.currentStreak(days, today)
         if (streak <= 0) return Result.success()
@@ -70,14 +71,7 @@ class StreakNotificationWorker(
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val dayWord = if (streak == 1) "day" else "days"
-        val (title, text) = if (hoursBefore <= 1) {
-            "Last chance to save your streak!" to
-                "Only about an hour left. Read a few pages to keep your $streak $dayWord streak alive."
-        } else {
-            "Keep the fire alive!" to
-                "About $hoursBefore hours left to read and keep your $streak $dayWord streak going."
-        }
+        val (title, text) = StreakReminderTexts.forReminder(streak, hoursBefore)
 
         val notification = NotificationCompat.Builder(context, NotificationChannels.STREAK_REMINDERS)
             .setSmallIcon(R.drawable.ic_stat_summit)

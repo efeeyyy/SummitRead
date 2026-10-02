@@ -69,7 +69,7 @@ import com.example.summitread.R
 import com.example.summitread.data.BookRepository
 import com.example.summitread.data.UserPreferences
 import com.example.summitread.services.ReadingTimerService
-import com.example.summitread.services.TimerStatus
+import com.example.summitread.platform.TimerStatus
 import com.example.summitread.theme.AccentColor
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme

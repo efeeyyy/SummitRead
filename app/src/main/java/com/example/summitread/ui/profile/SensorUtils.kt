@@ -1,10 +1,5 @@
 package com.example.summitread.ui.profile
 
-import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
@@ -16,7 +11,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import kotlin.math.atan2
+import com.example.summitread.platform.AndroidTiltSensor
+import com.example.summitread.platform.TiltFilter
+import com.example.summitread.platform.TiltSensor
 
 /**
  * Device tilt in degrees (already damped for UI use). The values are snapshot state; read them
@@ -34,6 +31,9 @@ class TiltState {
  * ONE tilt sensor listener for the whole screen (#39/#45). It is registered only while the
  * lifecycle is RESUMED (ON_RESUME/ON_PAUSE) and always released when the composable leaves.
  * Updates are ignored until the tilt changed by [ProfileLogic.TILT_THRESHOLD_DEGREES].
+ *
+ * The sensor itself is the platform [TiltSensor] (SensorManager on Android); damping, clamping and the NaN
+ * guard are the shared [TiltFilter].
  */
 @Composable
 fun rememberTiltState(): TiltState {
@@ -42,67 +42,22 @@ fun rememberTiltState(): TiltState {
     val tilt = remember { TiltState() }
 
     DisposableEffect(context, lifecycleOwner) {
-        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-        val sensor = sensorManager?.let {
-            it.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR) ?: it.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        }
-        if (sensorManager == null || sensor == null) {
-            return@DisposableEffect onDispose { }
-        }
+        val sensor: TiltSensor = AndroidTiltSensor(context)
 
-        // Preallocated: no per-event allocations.
-        val rotationMatrix = FloatArray(9)
-        val orientation = FloatArray(3)
-
-        val listener = object : SensorEventListener {
-            override fun onSensorChanged(event: SensorEvent) {
-                val newPitch: Float
-                val newRoll: Float
-                if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
-                    SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
-                    SensorManager.getOrientation(rotationMatrix, orientation)
-                    // orientation: 0 = azimuth, 1 = pitch (X), 2 = roll (Y)
-                    newPitch = Math.toDegrees(orientation[1].toDouble()).toFloat() * DAMPING
-                    newRoll = Math.toDegrees(orientation[2].toDouble()).toFloat() * DAMPING
-                } else {
-                    // Accelerometer fallback for devices without a rotation vector sensor.
-                    val x = event.values[0].toDouble()
-                    val y = event.values[1].toDouble()
-                    val z = event.values[2].toDouble()
-                    newPitch = Math.toDegrees(atan2(y, z)).toFloat() * DAMPING
-                    newRoll = -Math.toDegrees(atan2(x, z)).toFloat() * DAMPING
-                }
-                // getOrientation() uses asin(); near upright (pitch ≈ ±90°) float rounding can
-                // yield NaN, and a NaN offset makes LinearGradient creation throw.
-                if (!newPitch.isFinite() || !newRoll.isFinite()) return
-                val pitch = newPitch.coerceIn(-MAX_TILT_DEGREES, MAX_TILT_DEGREES)
-                val roll = newRoll.coerceIn(-MAX_TILT_DEGREES, MAX_TILT_DEGREES)
+        fun register() {
+            sensor.start { rawPitch, rawRoll ->
+                val (pitch, roll) = TiltFilter.filter(rawPitch, rawRoll) ?: return@start
                 if (ProfileLogic.exceedsThreshold(tilt.pitch, tilt.roll, pitch, roll)) {
                     tilt.pitch = pitch
                     tilt.roll = roll
                 }
-            }
-
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-        }
-
-        var registered = false
-        fun register() {
-            if (!registered) {
-                registered = sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
-            }
-        }
-        fun unregister() {
-            if (registered) {
-                sensorManager.unregisterListener(listener)
-                registered = false
             }
         }
 
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> register()
-                Lifecycle.Event.ON_PAUSE -> unregister()
+                Lifecycle.Event.ON_PAUSE -> sensor.stop()
                 else -> Unit
             }
         }
@@ -110,12 +65,9 @@ fun rememberTiltState(): TiltState {
 
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            unregister()
+            sensor.stop()
         }
     }
 
     return tilt
 }
-
-private const val DAMPING = 0.5f
-private const val MAX_TILT_DEGREES = 45f

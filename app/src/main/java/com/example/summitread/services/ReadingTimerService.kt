@@ -15,7 +15,9 @@ import androidx.core.app.ServiceCompat
 import com.example.summitread.MainActivity
 import com.example.summitread.R
 import com.example.summitread.data.ElapsedTimeFormat
-import com.example.summitread.data.UserPreferences
+import com.example.summitread.platform.AndroidAppContainer
+import com.example.summitread.platform.TimerState
+import com.example.summitread.platform.TimerStatus
 import com.example.summitread.notifications.NotificationChannels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,14 +30,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-enum class TimerStatus { IDLE, RUNNING, PAUSED }
-
-/** Snapshot of the single, app-wide reading timer. It is always bound to one [bookId]. */
-data class TimerState(
-    val status: TimerStatus = TimerStatus.IDLE,
-    val bookId: Long = -1L,
-    val elapsedMillis: Long = 0L
-)
 
 /**
  * Foreground reading timer bound to a book. Supports real pause/resume (pause keeps the elapsed time).
@@ -188,7 +182,7 @@ class ReadingTimerService : Service() {
             // Persist first, so the time cannot be lost between the service dying and the UI reading it.
             if (elapsed >= 1000L) {
                 try {
-                    UserPreferences(applicationContext).addPendingTimerSession(stoppedBookId, elapsed)
+                    AndroidAppContainer.get(applicationContext).preferences.addPendingTimerSession(stoppedBookId, elapsed)
                 } catch (_: Exception) {
                     // best effort; nothing else to do
                 }
@@ -280,7 +274,7 @@ class ReadingTimerService : Service() {
             val elapsed = currentElapsed()
             val destroyedBookId = bookId
             if (elapsed >= 1000L && destroyedBookId > 0L) {
-                val prefs = UserPreferences(applicationContext)
+                val prefs = AndroidAppContainer.get(applicationContext).preferences
                 persistScope.launch {
                     try {
                         prefs.addPendingTimerSession(destroyedBookId, elapsed)

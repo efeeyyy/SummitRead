@@ -31,3 +31,4 @@ plugins {
 
 rootProject.name = "SummitRead"
 include(":app")
+include(":shared")

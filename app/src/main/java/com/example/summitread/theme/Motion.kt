@@ -9,6 +9,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import com.example.summitread.platform.Haptics
 
 /** Shared animation specs. iOS-like: slightly under-damped springs, medium-low stiffness. */
 object AppMotion {
@@ -39,22 +40,22 @@ object AppMotion {
  * Compose platform; swap the mapping here if iOS needs UIImpactFeedbackGenerator.
  */
 @Immutable
-class AppHaptics internal constructor(private val feedback: androidx.compose.ui.hapticfeedback.HapticFeedback) {
+class AppHaptics internal constructor(private val feedback: androidx.compose.ui.hapticfeedback.HapticFeedback) : Haptics {
     /** Light impact: selection changes, tab switches, segmented control. */
-    fun light() = feedback.performHapticFeedback(HapticFeedbackType.SegmentTick)
+    override fun light() = feedback.performHapticFeedback(HapticFeedbackType.SegmentTick)
 
     /** Toggle switched on/off. */
-    fun toggle(on: Boolean) =
+    override fun toggle(on: Boolean) =
         feedback.performHapticFeedback(if (on) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
 
     /** Pages logged, session saved. */
-    fun logged() = feedback.performHapticFeedback(HapticFeedbackType.Confirm)
+    override fun logged() = feedback.performHapticFeedback(HapticFeedbackType.Confirm)
 
     /** Summit reached. */
-    fun success() = feedback.performHapticFeedback(HapticFeedbackType.Confirm)
+    override fun success() = feedback.performHapticFeedback(HapticFeedbackType.Confirm)
 
     /** Destructive or rejected action. */
-    fun warning() = feedback.performHapticFeedback(HapticFeedbackType.Reject)
+    override fun warning() = feedback.performHapticFeedback(HapticFeedbackType.Reject)
 }
 
 @Composable

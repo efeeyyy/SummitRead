@@ -98,7 +98,8 @@ fun NoteCard(
             modifier = Modifier.padding(top = AppSpacing.xs)
         )
 
-        if (note.photoPath != null) {
+        val photoPath = note.photoPath
+        if (photoPath != null) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -106,7 +107,7 @@ fun NoteCard(
                 contentAlignment = Alignment.Center
             ) {
                 PolaroidPhoto(
-                    imagePath = note.photoPath,
+                    imagePath = photoPath,
                     pageNumber = note.pageNumber,
                     modifier = Modifier.graphicsLayer { rotationZ = tilt }
                 )

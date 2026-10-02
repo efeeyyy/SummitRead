@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.summitread.data.PageMath
 import com.example.summitread.services.ReadingTimerService
-import com.example.summitread.services.TimerStatus
+import com.example.summitread.platform.TimerStatus
 import com.example.summitread.theme.AppMotion
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme

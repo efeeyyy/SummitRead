@@ -41,7 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.summitread.R
-import com.example.summitread.data.ImageStorage
+import com.example.summitread.platform.AndroidAppContainer
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.data.db.CharacterEntity
 import com.example.summitread.data.db.NoteEntity
@@ -201,7 +201,7 @@ private fun NotesTab(
     ) { uri ->
         if (uri != null) {
             scope.launch {
-                onPhotoPathChange(ImageStorage.copyImageToInternalStorage(context, uri, "note"))
+                onPhotoPathChange(AndroidAppContainer.get(context).imageStorage.copyToStorage(uri.toString(), "note"))
             }
         }
     }
