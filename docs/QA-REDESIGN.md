@@ -41,3 +41,30 @@ PASS: hero, 2x2 stat kutuları, ClimbTime diyaloğu (`climbtime_dialog_light.png
 
 ## Öne çıkan ekran görüntüleri
 home_list_dark.png, home_shelf_light.png, mountain_top_light.png, mountain_top_dark.png, profile_top_light.png, profile_top_dark.png
+
+## Düzeltmeler (polish)
+Doğrulama: emülatör Pixel_9a, açık + koyu tema, ivme ölçer dik (`0:9.81:0`) iken Profile açık, `adb logcat -b crash` boş. Ekran görüntüleri: `scratchpad\qa3\`.
+`.\gradlew.bat assembleDebug testDebugUnitTest lintDebug` -> BUILD SUCCESSFUL, 60 test geçti, lint 0 hata (27 uyarı, çoğu eski bağımlılık/sürüm uyarısı).
+
+| # | Madde | Durum | Not |
+|---|---|---|---|
+| 1 | Add Book sheet: çark kesik / kaydırmayı yutuyor | DÜZELTİLDİ | Sheet kompakt (kapak 80x120, çark 192dp; width sınırı `widthIn` sırası düzeltildi: önceki 232dp sınırı hiç çalışmıyordu), çark + parlaklık kaydırmasız görünüyor. Çark yalnız disk üstünde basışla başlar; dokunma kayma eşiği aşılana dek hiçbir şey tüketilmez, tek dokunuş renk seçer, disk dışı/köşe kaydırmaya bırakılır. Dikey kaydırma disk üstünde başlarsa renk seçer (bilerek). |
+| 2 | Mountain kaydırılmış cam başlık gürültülü | DÜZELTİLDİ | Başlık `GlassThickness.Regular` (blur 40dp, tint %86/%80), noise kapalı, cam çubuk ile kapsüller ilk 1/3 kaydırmada çapraz geçer (`barAlpha`), hairline duruyor. |
+| 3 | Cam sekme çubuğu blur zayıf | DÜZELTİLDİ | Malzeme token'ları `Glass.kt` içinde tek yerde (`GlassThickness`: Thin 24dp, Regular 40dp, Thick 48dp); sekme çubuğu ve başlık `Regular` kullanır, kayan yuvarlak biçim korundu. |
+| 4 | Odak modunda status bar ikonları | DÜZELTİLDİ | `StatusBarIconsFollowSky`: gökyüzü parlaklığına göre; cam başlığın üstündeyken uygulama temasına göre; odak modu girişinde yeniden uygulanır. Odak modu + gece gökyüzünde beyaz ikon doğrulandı (açık ve koyu). |
+| 5 | Relic kart gölgesi aşırı kayıyor | DÜZELTİLDİ | Sert kaydırılmış plaka kaldırıldı; yumuşak elevation gölgesi, kayma en çok 4dp, kart eğimi en çok 10 derece, shimmer kayması kart boyutunun %30'u ile sınırlı; NaN/Inf eğim 0 sayılır. |
+| 6a | Pasif "Add Book" kontrastı (koyu) | DÜZELTİLDİ | Pasif PillButton: nötr gri kapsül + secondaryLabel (alfa solması yok); Log Pages, Save vb. hepsi. |
+| 6b | Sort / satır menüleri iOS tarzı | DÜZELTİLDİ | Yeni `ui/components/Menu.kt` (`AppMenu`, `AppMenuItem`, `AppMenuDivider`): 14dp yuvarlak, hairline kenar, Inter, seçili = tint tik, sağda ikon (Archive). Eski `HomeDropdownMenu` silindi. Not: popup ayrı pencere olduğu için gerçek blur yok (opak yüzey). |
+| 6c | Takvim şeridi sol boşluğu | DÜZELTİLDİ | Şerit sol 16dp'de başlar (bugün 3. sırada), kenarlarda 16dp'lik solma maskesi; kırpık gün parçası görünmez. |
+| 6d | "Suggested: 1 pages" | DÜZELTİLDİ | `1 page / n pages` (Suggested, Use, "Only 1 page left"). |
+| 6e | Pasif Log Pages / zamanlayıcı rakamları | DÜZELTİLDİ | Boştaki rakamlar `secondaryLabel`; pasif buton yukarıdaki gibi. |
+| 6f | Notes boş durumu (dağ ekranı) | DÜZELTİLDİ | "No notes yet — tap Add note to capture a thought." (düğme "Add note" olduğu için "Notes" yerine bu ifade). |
+| 6g | Hedef sheet'inde çift sayı alanı | DÜZELTİLDİ | Tek etiketli stepper ("N books this year"), metin alanı kaldırıldı. |
+| 6h | Journey zaman çizelgesi rayı kopuk | DÜZELTİLDİ | LazyColumn `spacedBy` kaldırıldı, boşluk öğelerin içinde; ray kartlar arasında sürekli. |
+| 7a | AppSheet çağıranda `@OptIn` | DÜZELTİLDİ | `AppSheet` dosya düzeyinde opt-in; `AppSheetState`/`rememberAppSheetState()` sarmalayıcısı (`hide()`), çağıranlardaki tüm opt-in'ler silindi. |
+| 7b | AppAlertDialog içerik slotu | DÜZELTİLDİ (kısmen kullanıldı) | `content: (@Composable ColumnScope.() -> Unit)? = null` eklendi. Kamp istatistikleri zaten `AppSheet` + gruplu liste olduğundan (daha uygun) taşınmadı. |
+| 7c | IconCircleButton dokunma hedefi | DÜZELTİLDİ | Tüm 48dp alan tıklanır, görünür daire `size`; `reserveTouchTarget = false` ile yerleşim tam `size` kalır (cam başlık satırı 44dp). |
+| 7d | StatTile onClickLabel | DÜZELTİLDİ | Parametre eklendi; ClimbTime kutusu "Explain ClimbTime" etiketini kullanır. |
+| 8 | Kullanılmayan kod | DÜZELTİLDİ | `BookDao.getTotalPagesRead` + `BookRepository.totalPagesRead`, `HomeDropdownMenu/HomeMenuItem`, `menu_item_selected` ve 17 kullanılmayan string silindi (UnusedResources 19 -> 2: backup/data-extraction xml, manifest'ten kullanılıyor). `AddBookDialog` artık yalnız docs'ta geçiyor (kod kalıntısı yok). |
+
+Bilinen / yapılmayanlar: odak panelinde koyu temada iç kart siyah (kapsam dışı), "Archive menüsü kartla çakışıyor" kontrol edilmedi, Mountain %50 halkası ve büyük başlık/Profile boş bant maddeleri bu turda ele alınmadı.

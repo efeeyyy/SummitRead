@@ -180,4 +180,4 @@ Rules for everyone: no new hard-coded colours/font sizes/radii (use tokens); rep
 - **Corners:** Compose has no continuous (squircle) corners; `RoundedCornerShape` with iOS radii is used. A custom `Shape` can replace `AppShapes` later without touching components.
 - **Window background:** `res/values/themes.xml` (+ `values-night`) still uses the old `#F8F6F2`/navy first-frame colour; set to `#F2F2F7` / `#000000` when touching resources (outside the design-system scope).
 - **Scroll sync:** `LargeTitleState` observes nested scroll; after programmatic `scrollToItem`, call `state.reset()`.
-- **Not provided yet:** indeterminate progress, toast/snackbar, context menus, search bar. Use Material equivalents and ask for a component rather than inventing local styles.
+- **Not provided yet:** indeterminate progress, toast/snackbar, search bar. Menus: `AppMenu`/`AppMenuItem` (`ui/components/Menu.kt`). Glass materials are tokens in `GlassThickness` (`Glass.kt`); sheets use `AppSheetState`, alerts take an optional `content` slot. Use Material equivalents and ask for a component rather than inventing local styles.
