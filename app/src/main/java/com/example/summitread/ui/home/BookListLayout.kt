@@ -2,7 +2,7 @@ package com.example.summitread.ui.home
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.scrollBy
@@ -15,22 +15,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,9 +32,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -53,14 +41,24 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.example.summitread.R
 import com.example.summitread.data.db.BookEntity
+import com.example.summitread.theme.AppMotion
+import com.example.summitread.theme.AppTheme
+import com.example.summitread.theme.AppType
+import com.example.summitread.theme.rememberAppHaptics
+import com.example.summitread.theme.tabularNumbers
+import com.example.summitread.ui.components.CardContainer
+import com.example.summitread.ui.components.IconButtonStyle
+import com.example.summitread.ui.components.IconCircleButton
+import com.example.summitread.ui.components.LinearProgressCapsule
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -82,11 +80,18 @@ fun BookListLayout(
     onArchiveBook: (BookEntity) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    shimmer: ShimmerPhase = NoShimmer
+    shimmer: ShimmerPhase = NoShimmer,
+    header: (@Composable () -> Unit)? = null,
+    footer: (@Composable () -> Unit)? = null
 ) {
     val listState = rememberLazyListState()
     val haptics = LocalHapticFeedback.current
-    val edgePx = with(LocalDensity.current) { 72.dp.toPx() }
+    // The header item sits before the books, which shifts every book's lazy-list index by one.
+    val headerCount = if (header != null) 1 else 0
+    val density = LocalDensity.current
+    val edgePx = with(density) { 72.dp.toPx() }
+    val topInsetPx = with(density) { contentPadding.calculateTopPadding().toPx() }
+    val bottomInsetPx = with(density) { contentPadding.calculateBottomPadding().toPx() }
 
     // Working order while dragging / until the database catches up with the dropped order.
     var order by remember { mutableStateOf<List<Long>?>(null) }
@@ -123,7 +128,7 @@ fun BookListLayout(
             val currentOrder = order ?: break
             // Only act on a layout that already reflects the current order; right after a swap the layout is
             // stale for one frame and would otherwise swap straight back.
-            if (dragged.index == currentOrder.indexOf(id)) {
+            if (dragged.index - headerCount == currentOrder.indexOf(id)) {
                 val centerY = dragTop + dragged.size / 2f
                 val target = findDropTarget(
                     items = visible.mapNotNull { item ->
@@ -134,13 +139,16 @@ fun BookListLayout(
                 )
                 if (target != null) order = moveId(currentOrder, id, target)
             }
-            val viewport = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
+            // The list runs under the glass bars, so the auto-scroll zones are measured from the visible area
+            // (below the top bar, above the tab bar), not from the raw list edges.
+            val visibleTop = topInsetPx
+            val visibleBottom = info.viewportSize.height - bottomInsetPx
             val center = dragTop + dragged.size / 2f
             val scrollBy = when {
-                center < edgePx -> -(edgePx - center) / edgePx * 24f
-                center > viewport - edgePx -> (center - (viewport - edgePx)) / edgePx * 24f
+                center < visibleTop + edgePx -> -(visibleTop + edgePx - center) / edgePx * 24f
+                center > visibleBottom - edgePx -> (center - (visibleBottom - edgePx)) / edgePx * 24f
                 else -> 0f
-            }
+            }.coerceIn(-36f, 36f)
             if (scrollBy != 0f) listState.scrollBy(scrollBy)
         }
     }
@@ -180,6 +188,9 @@ fun BookListLayout(
             )
         }
     ) {
+        if (header != null) {
+            item(key = "header") { header() }
+        }
         items(shown, key = { it.id }) { book ->
             val isDragged = draggingId == book.id
             val position = shown.indexOfFirst { it.id == book.id }
@@ -227,17 +238,28 @@ private fun BookListItem(
     onMoveDown: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
+    val colors = AppTheme.colors
     val baseColor = bookBaseColor(book)
     val percent = bookProgressPercent(book)
     val progress = bookProgress(book)
     val completed = book.isCompleted || progress >= 1f
     var menuOpen by remember { mutableStateOf(false) }
+    val haptics = rememberAppHaptics()
+    // The card lifts slightly while it is being dragged.
+    val lift by animateFloatAsState(if (isDragged) 1.03f else 1f, AppMotion.snappy(), label = "dragLift")
+
+    val moveUpLabel = stringResource(R.string.move_up)
+    val moveDownLabel = stringResource(R.string.move_down)
 
     with(sharedTransitionScope) {
         Box(modifier = modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-            ElevatedCard(
+            CardContainer(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = lift
+                        scaleY = lift
+                    }
                     .sharedBounds(
                         sharedContentState = rememberSharedContentState(key = "book_container_${book.id}"),
                         animatedVisibilityScope = animatedVisibilityScope
@@ -245,36 +267,28 @@ private fun BookListItem(
                     .semantics {
                         customActions = listOfNotNull(
                             onMoveUp?.let { action ->
-                                CustomAccessibilityAction("Move up") { action(); true }
+                                CustomAccessibilityAction(moveUpLabel) { action(); true }
                             },
                             onMoveDown?.let { action ->
-                                CustomAccessibilityAction("Move down") { action(); true }
+                                CustomAccessibilityAction(moveDownLabel) { action(); true }
                             }
                         )
-                    }
-                    .clickable(onClickLabel = "Open ${book.title}", onClick = onClick),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = if (isDragged) 10.dp else 1.dp)
+                    },
+                onClick = {
+                    haptics.light()
+                    onClick()
+                },
+                onClickLabel = stringResource(R.string.open_book, book.title),
+                contentPadding = PaddingValues(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     // Small cover: the real image when there is one, a vector cover otherwise.
                     Box {
-                        CoverImage(
-                            path = book.coverImagePath,
-                            contentDescription = "Cover of ${book.title}",
-                            modifier = Modifier
-                                .width(48.dp)
-                                .height(72.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            fallback = { VectorCover(base = baseColor) }
-                        )
+                        CoverThumbnail(book = book, width = 56.dp, height = 84.dp)
                         if (completed) {
                             GoldFoilSeal(
                                 shimmer = shimmer,
-                                size = 22.dp,
+                                size = 24.dp,
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
                                     .offset(x = 8.dp, y = 8.dp)
@@ -282,56 +296,54 @@ private fun BookListItem(
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = book.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            style = AppType.Headline,
+                            color = colors.label,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = book.author,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = AppType.Subheadline,
+                            color = colors.secondaryLabel,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(6.dp),
-                                color = baseColor,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                strokeCap = StrokeCap.Round
+                            LinearProgressCapsule(
+                                progress = progress,
+                                modifier = Modifier.weight(1f),
+                                height = 6.dp,
+                                color = if (completed) colors.gold else baseColor
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = "$percent% Read",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = stringResource(R.string.percent_read, percent),
+                                style = AppType.Footnote.tabularNumbers(),
+                                color = colors.secondaryLabel,
                                 maxLines = 1
                             )
                         }
                     }
 
                     Box {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More options for ${book.title}"
-                            )
-                        }
-                        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Archive") },
+                        IconCircleButton(
+                            icon = Icons.Rounded.MoreHoriz,
+                            contentDescription = stringResource(R.string.more_options_for, book.title),
+                            onClick = { menuOpen = true },
+                            style = IconButtonStyle.Plain,
+                            tint = colors.secondaryLabel
+                        )
+                        HomeDropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                            HomeMenuItem(
+                                text = stringResource(R.string.archive),
                                 onClick = {
                                     menuOpen = false
                                     onArchive()

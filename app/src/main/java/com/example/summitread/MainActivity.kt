@@ -70,9 +70,11 @@ class MainActivity : ComponentActivity() {
                         android.graphics.Color.TRANSPARENT,
                         android.graphics.Color.TRANSPARENT
                     ) { isDark },
+                    // 3-button navigation scrim in the design-system canvas colours (#F2F2F7 / black); gesture
+                    // navigation stays fully transparent, so the floating tab bar sits over the content.
                     navigationBarStyle = SystemBarStyle.auto(
-                        android.graphics.Color.argb(0xe6, 0xFF, 0xFF, 0xFF),
-                        android.graphics.Color.argb(0x80, 0x1B, 0x1B, 0x1B)
+                        android.graphics.Color.argb(0xCC, 0xF2, 0xF2, 0xF7),
+                        android.graphics.Color.argb(0x99, 0x00, 0x00, 0x00)
                     ) { isDark }
                 )
                 onDispose { }

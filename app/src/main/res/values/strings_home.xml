@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation shell + Home redesign (own file so it never conflicts with strings.xml edits). -->
+    <string name="library">Library</string>
+    <string name="archived_title">Archived</string>
+    <string name="archived_entry">Archived</string>
+    <string name="back_to_library">Back to library</string>
+    <string name="switch_to_list_view">Switch to list view</string>
+    <string name="switch_to_shelf_view">Switch to shelf view</string>
+    <string name="sort_prefix">Sort: %1$s</string>
+    <string name="menu_item_selected">Selected</string>
+    <string name="empty_library_title">Your library is empty</string>
+    <string name="empty_library_message">Add your first book and start climbing.</string>
+    <string name="empty_archive_title">No archived books</string>
+    <string name="empty_archive_message">Books you archive appear here. Their reading history is kept.</string>
+    <string name="archive_book_title">Archive book?</string>
+    <string name="archive_book_message">\"%1$s\" will be hidden from your shelf and list. Your reading sessions, notes and relics are kept, and you can unarchive it any time from Archived.</string>
+    <string name="archive">Archive</string>
+    <string name="archive_book_label">Archive book</string>
+    <string name="unarchive">Unarchive</string>
+    <string name="unarchive_book">Unarchive %1$s</string>
+    <string name="archived_footer">Archiving only hides a book. Reading sessions, notes and relics are kept.</string>
+    <string name="more_options_for">More options for %1$s</string>
+    <string name="open_book">Open %1$s</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="cover_of">Cover of %1$s</string>
+    <string name="percent_read">%1$d%% Read</string>
+    <string name="book_by_author">%1$s by %2$s</string>
+    <string name="book_read_percent">%1$d%% read</string>
+    <string name="book_completed">completed</string>
+    <string name="author_and_percent">%1$s · %2$d%% Read</string>
+    <string name="cover_color">Cover Color</string>
+    <string name="cover_preview">Cover preview</string>
+    <string name="color_preview">Color preview</string>
+    <string name="remove_cover">Remove Cover</string>
+    <string name="color_swatch">%1$s color</string>
+    <string name="color_wheel_description">Color wheel. Hue %1$d, saturation %2$d percent. Drag to choose a color.</string>
+    <string name="color_brightness">Brightness</string>
+    <string name="color_brightness_description">Color brightness</string>
+    <plurals name="streak_days">
+        <item quantity="one">Current streak: %1$d day</item>
+        <item quantity="other">Current streak: %1$d days</item>
+    </plurals>
+    <plurals name="book_count">
+        <item quantity="one">%1$d book</item>
+        <item quantity="other">%1$d books</item>
+    </plurals>
+</resources>
