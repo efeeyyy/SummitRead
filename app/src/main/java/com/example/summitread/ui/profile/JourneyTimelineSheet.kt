@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -46,7 +45,6 @@ import java.util.Locale
  * rating, then the chronological sessions with the notes that belong to each session.
  */
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
 fun JourneyTimelineSheet(
     relic: RelicEntity,
     book: BookEntity?,
@@ -75,10 +73,10 @@ fun JourneyTimelineSheet(
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(bottom = AppSpacing.xl),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.md)
+            // No spacedBy: gaps between rows would break the timeline rail, so every item pads itself.
         ) {
             item(key = "summary") {
-                CardContainer(modifier = Modifier.fillMaxWidth()) {
+                CardContainer(modifier = Modifier.fillMaxWidth().padding(bottom = AppSpacing.md)) {
                     Text(
                         text = "${relic.emoji} $title",
                         style = AppType.Title2,
@@ -106,7 +104,7 @@ fun JourneyTimelineSheet(
             }
 
             item(key = "logbook") {
-                CardContainer(modifier = Modifier.fillMaxWidth()) {
+                CardContainer(modifier = Modifier.fillMaxWidth().padding(bottom = AppSpacing.md)) {
                     Text("Summit Logbook", style = AppType.Footnote, color = colors.secondaryLabel)
                     Spacer(Modifier.height(AppSpacing.xxs))
                     Text(
@@ -133,7 +131,7 @@ fun JourneyTimelineSheet(
                     style = AppType.Title3,
                     color = colors.label,
                     modifier = Modifier
-                        .padding(start = AppSpacing.xs, top = AppSpacing.xs)
+                        .padding(start = AppSpacing.xs, top = AppSpacing.xs, bottom = AppSpacing.sm)
                         .semantics { heading() }
                 )
             }
@@ -144,7 +142,7 @@ fun JourneyTimelineSheet(
                         text = "No recorded sessions.",
                         style = AppType.Subheadline,
                         color = colors.secondaryLabel,
-                        modifier = Modifier.padding(start = AppSpacing.xs)
+                        modifier = Modifier.padding(start = AppSpacing.xs, bottom = AppSpacing.md)
                     )
                 }
             } else {
@@ -167,12 +165,12 @@ fun JourneyTimelineSheet(
                         style = AppType.Title3,
                         color = colors.label,
                         modifier = Modifier
-                            .padding(start = AppSpacing.xs, top = AppSpacing.xs)
+                            .padding(start = AppSpacing.xs, top = AppSpacing.xs, bottom = AppSpacing.sm)
                             .semantics { heading() }
                     )
                 }
                 items(otherNotes, key = { "note_${it.id}" }) { note ->
-                    NoteLine(note)
+                    NoteLine(note, Modifier.padding(bottom = AppSpacing.xs))
                 }
             }
         }

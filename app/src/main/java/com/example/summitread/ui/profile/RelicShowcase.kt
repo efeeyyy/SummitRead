@@ -36,8 +36,14 @@ import java.util.Date
 import java.util.Locale
 
 private const val MAX_TILT_DEGREES = 25f
-private const val SHADOW_SHIFT_PX_PER_DEGREE = 1.2f
-private const val SHIMMER_SHIFT_PX_PER_DEGREE = 12f
+
+/** The card itself leans at most this much (the sensor range is 25, a full lean looked like a flipped card). */
+private const val MAX_CARD_ROTATION_DEGREES = 10f
+/** The soft shadow never drifts further than this from its resting offset (iOS-subtle, no slanted slab). */
+private val MAX_SHADOW_SHIFT = 4.dp
+
+/** The shimmer band slides by at most this fraction of the card size. */
+private const val MAX_SHIMMER_SHIFT_FRACTION = 0.3f
 
 /**
  * Medal card for one relic. Tilt comes from ONE hoisted [TiltState]; it is only read inside
@@ -50,28 +56,34 @@ fun RelicCardNode(relic: RelicEntity, tilt: TiltState, onClick: () -> Unit) {
     val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
     val cardShape = AppShapes.large
     // Black shadow is invisible on the true-black dark canvas, so dark mode uses a soft gold glow.
-    val shadowColor = if (colors.isDark) colors.gold.copy(alpha = 0.20f) else Color.Black.copy(alpha = 0.18f)
+    val shadowColor = if (colors.isDark) colors.gold.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.45f)
     val shimmerAlpha = if (colors.isDark) 0.16f else 0.32f
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(bottom = 6.dp, end = 6.dp)
+            .padding(6.dp)
             .graphicsLayer {
-                rotationX = tilt.pitch.coerceIn(-MAX_TILT_DEGREES, MAX_TILT_DEGREES)
-                rotationY = tilt.roll.coerceIn(-MAX_TILT_DEGREES, MAX_TILT_DEGREES)
+                rotationX = shiftOf(tilt.pitch) * MAX_CARD_ROTATION_DEGREES
+                rotationY = shiftOf(tilt.roll) * MAX_CARD_ROTATION_DEGREES
                 cameraDistance = 12f * density
             }
     ) {
-        // Shadow layer: offset follows the tilt (light comes from the opposite side).
+        // Soft blurred shadow (a real elevation shadow, not a hard slab). Its offset follows the tilt but is
+        // bounded to a few dp, and it is a no-op while the phone is upright.
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .graphicsLayer {
-                    translationX = 3f * density + tilt.roll * SHADOW_SHIFT_PX_PER_DEGREE
-                    translationY = 3f * density + tilt.pitch * SHADOW_SHIFT_PX_PER_DEGREE
+                    val max = MAX_SHADOW_SHIFT.toPx()
+                    translationX = shiftOf(tilt.roll) * max
+                    translationY = 2.dp.toPx() + shiftOf(tilt.pitch) * max
+                    shadowElevation = 10.dp.toPx()
+                    shape = cardShape
+                    clip = false
+                    ambientShadowColor = shadowColor
+                    spotShadowColor = shadowColor
                 }
-                .background(shadowColor, cardShape)
         )
         Box(
             modifier = Modifier
@@ -87,8 +99,8 @@ fun RelicCardNode(relic: RelicEntity, tilt: TiltState, onClick: () -> Unit) {
                 .drawWithContent {
                     drawContent()
                     // Glossy metallic shimmer, shifted opposite to the shadow.
-                    val dx = -tilt.roll * SHIMMER_SHIFT_PX_PER_DEGREE
-                    val dy = -tilt.pitch * SHIMMER_SHIFT_PX_PER_DEGREE
+                    val dx = -shiftOf(tilt.roll) * size.width * MAX_SHIMMER_SHIFT_FRACTION
+                    val dy = -shiftOf(tilt.pitch) * size.height * MAX_SHIMMER_SHIFT_FRACTION
                     drawRect(
                         brush = Brush.linearGradient(
                             colors = listOf(
@@ -150,3 +162,7 @@ fun RelicCardNode(relic: RelicEntity, tilt: TiltState, onClick: () -> Unit) {
         }
     }
 }
+
+/** Tilt in degrees as a bounded -1..1 factor; non-finite input (a sensor glitch) counts as upright. */
+private fun shiftOf(degrees: Float): Float =
+    if (degrees.isFinite()) (degrees / MAX_TILT_DEGREES).coerceIn(-1f, 1f) else 0f

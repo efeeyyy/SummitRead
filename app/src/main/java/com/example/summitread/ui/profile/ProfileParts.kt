@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -48,7 +46,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -208,7 +205,6 @@ private fun ClimberAvatar(tier: AvatarTier, breathing: Boolean) {
 // ---------------------------------------------------------------------------------------------
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
 internal fun GoalSheet(currentGoal: Int, year: Int, onSave: (Int) -> Unit, onDismiss: () -> Unit) {
     val colors = AppTheme.colors
     val haptics = rememberAppHaptics()
@@ -252,13 +248,6 @@ internal fun GoalSheet(currentGoal: Int, year: Int, onSave: (Int) -> Unit, onDis
                 enabled = value < 999
             )
         }
-        Spacer(Modifier.height(AppSpacing.md))
-        AppTextField(
-            value = input,
-            onValueChange = { input = it.filter { c -> c.isDigit() }.take(3) },
-            placeholder = "Number of books",
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-        )
         Spacer(Modifier.height(AppSpacing.md))
         PillButton(
             text = "Save",
