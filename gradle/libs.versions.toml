@@ -23,6 +23,7 @@ kotlinxSerializationJson = "1.8.1"
 kotlinxDatetime = "0.8.0"
 workManager = "2.10.0"
 haze = "1.7.2"
+composeIconsExtended = "1.7.3"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -57,10 +58,15 @@ datastore-preferences-core = { module = "androidx.datastore:datastore-preference
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+compose-icons-extended-kmp = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeIconsExtended" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workManager" }
 # Compose Multiplatform (shared module only; the app module keeps using the androidx BOM above)
 compose-mp-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
 compose-mp-ui-graphics = { module = "org.jetbrains.compose.ui:ui-graphics", version.ref = "composeMultiplatform" }
+compose-mp-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
+compose-mp-animation = { module = "org.jetbrains.compose.animation:animation", version.ref = "composeMultiplatform" }
+compose-mp-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
+compose-mp-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

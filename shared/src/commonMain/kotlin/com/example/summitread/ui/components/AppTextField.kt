@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -85,7 +86,7 @@ fun AppTextField(
             singleLine = singleLine,
             minLines = minLines,
             maxLines = maxLines,
-            textStyle = AppType.Body.copy(color = colors.label),
+            textStyle = AppType.Body.copy(fontFamily = LocalTextStyle.current.fontFamily, color = colors.label),
             cursorBrush = SolidColor(colors.tint),
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
@@ -128,17 +129,5 @@ fun AppTextField(
                 modifier = Modifier.padding(start = AppSpacing.sm, top = 4.dp)
             )
         }
-    }
-}
-
-@LightDarkPreview
-@Composable
-private fun AppTextFieldPreview() = PreviewSurface {
-    var text by remember { mutableStateOf("") }
-    var filled by remember { mutableStateOf("The Hobbit") }
-    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
-        AppTextField(text, { text = it }, placeholder = "Search books", leadingIcon = Icons.Rounded.Search)
-        AppTextField(filled, { filled = it }, placeholder = "Title")
-        AppTextField("", {}, placeholder = "Pages", isError = true, supportingText = "Enter a number")
     }
 }

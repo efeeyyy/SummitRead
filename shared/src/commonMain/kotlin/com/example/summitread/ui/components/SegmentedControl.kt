@@ -116,10 +116,3 @@ fun SegmentedControl(
         }
     }
 }
-
-@LightDarkPreview
-@Composable
-private fun SegmentedControlPreview() = PreviewSurface {
-    var selected by remember { mutableIntStateOf(1) }
-    SegmentedControl(listOf("System", "Light", "Dark"), selected, { selected = it })
-}

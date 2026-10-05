@@ -48,6 +48,8 @@ fun SummitReadTheme(
     val colors = remember(isDark, accentColor) { appColors(isDark, accentColor) }
     val colorScheme = remember(isDark, accentColor) { summitColorScheme(isDark, accentColor) }
     val appThemeState = remember(themeMode, accentColor) { AppThemeState(themeMode, accentColor) }
+    val fontFamily = rememberInterFontFamily()
+    val typography = remember(fontFamily) { summitReadTypography(fontFamily) }
 
     CompositionLocalProvider(
         LocalAppThemeState provides appThemeState,
@@ -55,7 +57,7 @@ fun SummitReadTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = SummitReadTypography,
+            typography = typography,
             shapes = SummitReadShapes,
             content = content
         )

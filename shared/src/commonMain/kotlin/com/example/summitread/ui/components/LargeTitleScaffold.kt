@@ -259,28 +259,3 @@ fun LargeTitleTopBar(
         }
     }
 }
-
-@LightDarkPreview
-@Composable
-private fun LargeTitleScaffoldPreview() {
-    com.example.summitread.theme.SummitReadTheme {
-        LargeTitleScaffold(
-            title = "Library",
-            actions = {
-                IconCircleButton(Icons.Rounded.Add, "Add book", onClick = {})
-                IconCircleButton(Icons.Rounded.MoreHoriz, "More", onClick = {})
-            }
-        ) { padding ->
-            LazyColumn(contentPadding = padding) {
-                items((1..20).toList()) { i ->
-                    Text(
-                        "Book $i",
-                        style = AppType.Body,
-                        color = AppTheme.colors.label,
-                        modifier = Modifier.padding(AppSpacing.md)
-                    )
-                }
-            }
-        }
-    }
-}

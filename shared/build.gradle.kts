@@ -37,9 +37,16 @@ kotlin {
             api(libs.room.runtime)
             api(libs.sqlite.bundled)
             api(libs.datastore.preferences.core)
-            // Compose colour types (Hsv / MountainLogic / SkyModel). The UI itself still lives in :app (phase B).
-            implementation(libs.compose.mp.runtime)
-            implementation(libs.compose.mp.ui.graphics)
+            // Compose Multiplatform UI: design system (theme + ui/components). Screens still live in :app (phase B).
+            api(libs.compose.mp.runtime)
+            api(libs.compose.mp.ui.graphics)
+            api(libs.compose.mp.foundation)
+            api(libs.compose.mp.animation)
+            api(libs.compose.mp.ui)
+            api(compose.material3)
+            api(libs.compose.mp.components.resources)
+            api(libs.compose.icons.extended.kmp)
+            api(libs.haze)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -57,4 +64,9 @@ dependencies {
     add("kspAndroid", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
+}
+
+compose.resources {
+    packageOfResClass = "com.example.summitread.resources"
+    generateResClass = always
 }

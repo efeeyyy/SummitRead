@@ -92,18 +92,3 @@ fun StatTile(
         )
     }
 }
-
-@LightDarkPreview
-@Composable
-private fun CardsPreview() = PreviewSurface {
-    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.md)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
-            StatTile("12", "Day streak", Modifier.weight(1f), icon = Icons.Rounded.LocalFireDepartment, iconTint = AppTheme.colors.warning)
-            StatTile("4h 20m", "This week", Modifier.weight(1f), icon = Icons.Rounded.Schedule)
-        }
-        CardContainer(Modifier.fillMaxWidth(), onClick = {}) {
-            Text("The Hobbit", style = AppType.Headline, color = AppTheme.colors.label)
-            Text("212 of 310 pages", style = AppType.Subheadline, color = AppTheme.colors.secondaryLabel)
-        }
-    }
-}

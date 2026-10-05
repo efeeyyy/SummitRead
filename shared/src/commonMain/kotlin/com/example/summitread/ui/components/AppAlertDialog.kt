@@ -94,7 +94,7 @@ fun AppAlertDialog(
 }
 
 @Composable
-private fun AlertContent(
+fun AlertContent(
     title: String,
     message: String?,
     actions: List<AlertAction>,
@@ -174,30 +174,6 @@ private fun AlertButton(action: AlertAction, modifier: Modifier) {
             color = color,
             textAlign = TextAlign.Center,
             maxLines = 2
-        )
-    }
-}
-
-@LightDarkPreview
-@Composable
-private fun AlertPreview() = PreviewSurface {
-    Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
-        AlertContent(
-            title = "Delete this book?",
-            message = "Your reading sessions for it will be removed too.",
-            actions = listOf(
-                AlertAction("Delete", {}, AlertActionStyle.Destructive),
-                AlertAction("Cancel", {}, AlertActionStyle.Cancel)
-            )
-        )
-        AlertContent(
-            title = "Summit reached",
-            message = null,
-            actions = listOf(
-                AlertAction("Share", {}),
-                AlertAction("Add another book", {}),
-                AlertAction("Done", {}, AlertActionStyle.Cancel)
-            )
         )
     }
 }

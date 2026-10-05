@@ -188,23 +188,3 @@ fun IconCircleButton(
         }
     }
 }
-
-@LightDarkPreview
-@Composable
-private fun ButtonsPreview() = PreviewSurface {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        PillButton("Continue reading", onClick = {}, modifier = Modifier.width(300.dp))
-        PillButton("Add book", onClick = {}, style = PillStyle.Tinted, leadingIcon = Icons.Rounded.Add)
-        PillButton("Not now", onClick = {}, style = PillStyle.Plain)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            PillButton("Save", onClick = {}, size = PillSize.Small)
-            PillButton("Delete", onClick = {}, size = PillSize.Small, style = PillStyle.Tinted, destructive = true)
-            PillButton("Disabled", onClick = {}, size = PillSize.Small, enabled = false)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconCircleButton(Icons.Rounded.Share, "Share", onClick = {})
-            IconCircleButton(Icons.Rounded.Check, "Done", onClick = {}, style = IconButtonStyle.Filled)
-            IconCircleButton(Icons.Rounded.Close, "Close", onClick = {}, style = IconButtonStyle.Plain)
-        }
-    }
-}

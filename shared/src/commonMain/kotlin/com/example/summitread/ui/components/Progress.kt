@@ -106,15 +106,3 @@ fun LinearProgressCapsule(
         }
     }
 }
-
-@LightDarkPreview
-@Composable
-private fun ProgressPreview() = PreviewSurface {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ProgressRing(0.68f, size = 96.dp, strokeWidth = 10.dp) {
-            Text("68%", style = AppType.Headline.tabularNumbers(), color = AppTheme.colors.label)
-        }
-        LinearProgressCapsule(0.35f)
-        LinearProgressCapsule(0.02f)
-    }
-}

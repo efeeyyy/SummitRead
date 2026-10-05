@@ -164,18 +164,3 @@ private fun RowScope.TabItem(
         )
     }
 }
-
-@LightDarkPreview
-@Composable
-private fun GlassTabBarPreview() = PreviewSurface {
-    var selected by remember { mutableIntStateOf(1) }
-    val items = listOf(
-        GlassTabItem("Library", Icons.Rounded.AutoStories),
-        GlassTabItem("Mountain", Icons.Rounded.Landscape),
-        GlassTabItem("Profile", Icons.Rounded.Person)
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        GlassTabBar(items, selected, { selected = it }, glassState = null)
-        GlassTabBar(items, selected, { selected = it }, glassState = null, floating = false)
-    }
-}

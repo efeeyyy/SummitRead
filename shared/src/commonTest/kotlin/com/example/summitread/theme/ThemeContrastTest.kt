@@ -1,13 +1,13 @@
 package com.example.summitread.theme
 
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
 /** WCAG AA guard for the design-system palette: body text 4.5:1, large/secondary text noted. */
 class ThemeContrastTest {
 
     private fun assertAA(name: String, ratio: Double, min: Double = 4.5) =
-        assertTrue("$name contrast %.2f < $min".format(ratio), ratio >= min)
+        assertTrue(ratio >= min, "$name contrast $ratio < $min")
 
     @Test
     fun accentTextOnTintMeetsAA() {

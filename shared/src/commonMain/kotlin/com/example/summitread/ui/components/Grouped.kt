@@ -296,37 +296,3 @@ fun AppSwitch(
         )
     )
 }
-
-@LightDarkPreview
-@Composable
-private fun GroupedPreview() = PreviewSurface {
-    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xl)) {
-        InsetGroupedSection(
-            header = "Appearance",
-            footer = "The accent colour is used for buttons and highlights.",
-            separatorInset = GroupedRowDefaults.IconSeparatorInset
-        ) {
-            row {
-                GroupedRow(
-                    "Theme", leadingIcon = Icons.Rounded.Palette,
-                    trailing = RowTrailing.ValueChevron("System"), onClick = {}
-                )
-            }
-            row {
-                GroupedRow(
-                    "Reminders", subtitle = "Every evening at 20:00", leadingIcon = Icons.Rounded.Notifications,
-                    leadingTint = Color(0xFFFF9500), trailing = RowTrailing.Switch(true) {}
-                )
-            }
-            row {
-                GroupedRow(
-                    "Reading goal", leadingIcon = Icons.Rounded.Timer,
-                    leadingTint = Color(0xFF5856D6), trailing = RowTrailing.Value("30 min"), onClick = {}
-                )
-            }
-        }
-        InsetGroupedSection {
-            row { GroupedRow("Delete all data", destructive = true, onClick = {}) }
-        }
-    }
-}

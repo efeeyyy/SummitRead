@@ -97,7 +97,7 @@ fun AppSheet(
 }
 
 @Composable
-internal fun SheetGrabber(modifier: Modifier = Modifier) {
+fun SheetGrabber(modifier: Modifier = Modifier) {
     Box(
         modifier
             .padding(vertical = 8.dp)
@@ -108,19 +108,3 @@ internal fun SheetGrabber(modifier: Modifier = Modifier) {
 }
 
 /** Static look of a sheet for previews (ModalBottomSheet itself needs a window). */
-@LightDarkPreview
-@Composable
-private fun AppSheetPreview() = PreviewSurface {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(AppTheme.colors.elevatedSurface, AppShapes.sheet)
-            .padding(AppSpacing.md),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        SheetGrabber()
-        Text("Log reading", style = AppType.Headline, color = AppTheme.colors.label)
-        Box(Modifier.height(AppSpacing.md))
-        PillButton("Save", onClick = {}, modifier = Modifier.fillMaxWidth())
-    }
-}

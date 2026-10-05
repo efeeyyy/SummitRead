@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -92,7 +93,7 @@ fun PageInputCard(
                         if (text.length <= 5 && text.all { it.isDigit() }) onPagesInputChange(text)
                     },
                     textStyle = AppType.LargeTitle
-                        .copy(fontSize = 52.sp, lineHeight = 60.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, color = colors.label)
+                        .copy(fontFamily = LocalTextStyle.current.fontFamily, fontSize = 52.sp, lineHeight = 60.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, color = colors.label)
                         .tabularNumbers(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
@@ -106,7 +107,7 @@ fun PageInputCard(
                                 Text(
                                     text = "0",
                                     style = AppType.LargeTitle
-                                        .copy(fontSize = 52.sp, lineHeight = 60.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                                        .copy(fontFamily = LocalTextStyle.current.fontFamily, fontSize = 52.sp, lineHeight = 60.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                                         .tabularNumbers(),
                                     color = colors.tertiaryLabel
                                 )
