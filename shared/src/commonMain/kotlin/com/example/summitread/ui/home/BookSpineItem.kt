@@ -29,7 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
+import com.example.summitread.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +39,6 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.summitread.R
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.theme.AppType
 import com.example.summitread.theme.rememberAppHaptics
@@ -104,9 +104,9 @@ fun BookSpineItem(
     val haptics = rememberAppHaptics()
     val platformHaptics = LocalHapticFeedback.current
 
-    val byAuthor = stringResource(R.string.book_by_author, book.title, book.author)
-    val readText = if (percent > 0) stringResource(R.string.book_read_percent, percent) else null
-    val doneText = if (completed) stringResource(R.string.book_completed) else null
+    val byAuthor = stringResource(Res.string.book_by_author, book.title, book.author)
+    val readText = if (percent > 0) stringResource(Res.string.book_read_percent, percent) else null
+    val doneText = if (completed) stringResource(Res.string.book_completed) else null
     val description = listOfNotNull(byAuthor, readText, doneText).joinToString(", ")
 
     Box(modifier = modifier.size(width, height)) {
@@ -128,7 +128,7 @@ fun BookSpineItem(
                             haptics.light()
                             onClick()
                         },
-                        onLongClickLabel = if (onArchive != null) stringResource(R.string.archive_book_label) else null,
+                        onLongClickLabel = if (onArchive != null) stringResource(Res.string.archive_book_label) else null,
                         onLongClick = if (onArchive != null) {
                             {
                                 platformHaptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -174,7 +174,7 @@ fun BookSpineItem(
                         )
                     }
                     ReadLabel(
-                        text = stringResource(R.string.percent_read, percent),
+                        text = stringResource(Res.string.percent_read, percent),
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 13.dp, start = 2.dp, end = 2.dp)
@@ -204,7 +204,7 @@ fun BookSpineItem(
         if (onArchive != null) {
             AppMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 AppMenuItem(
-                    text = stringResource(R.string.archive),
+                    text = stringResource(Res.string.archive),
                     icon = Icons.Rounded.Inventory2,
                     onClick = {
                         menuOpen = false

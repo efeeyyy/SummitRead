@@ -17,7 +17,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.SubcomposeAsyncImage
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.theme.AccentColor
-import java.io.File
+import okio.Path.Companion.toPath
 
 /** The colour a book is drawn with: the colour-picker value when set, otherwise its accent palette entry. */
 fun bookBaseColor(book: BookEntity): Color = baseColorOf(book.coverColorArgb, book.accentColorIndex)
@@ -37,7 +37,8 @@ fun bookGradient(base: Color): Brush = Brush.verticalGradient(
 
 /**
  * Loads a stored cover. The DB keeps a plain file path, which Coil 3 does not reliably treat as a file, so the
- * path is always wrapped in a [File] (Coil maps it to a file URI). [fallback] shows while loading, on error
+ * path is always passed as an okio [okio.Path] (Coil reads it with its file fetcher on both platforms, no network
+ * module needed). [fallback] shows while loading, on error
  * and is the vector cover used when there is no image at all.
  */
 @Composable
@@ -51,7 +52,7 @@ fun CoverImage(
         Box(modifier) { fallback() }
     } else {
         SubcomposeAsyncImage(
-            model = File(path),
+            model = path.toPath(),
             contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             modifier = modifier,

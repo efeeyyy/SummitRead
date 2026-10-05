@@ -1,6 +1,6 @@
 package com.example.summitread.ui.home
 
-import androidx.activity.compose.BackHandler
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
@@ -31,12 +31,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import com.example.summitread.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.summitread.R
 import com.example.summitread.data.BookRepository
+import com.example.summitread.data.ImageStorage
 import com.example.summitread.data.UserPreferences
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme
@@ -52,11 +53,12 @@ private const val MODE_SHELF = 0
 private const val MODE_LIST = 1
 private const val MODE_ARCHIVED = 2
 
-@OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+@OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun HomeScreen(
     bookRepository: BookRepository,
     userPreferences: UserPreferences,
+    imageStorage: ImageStorage,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onNavigateToMountain: (bookId: Long) -> Unit = {},
@@ -106,14 +108,14 @@ fun HomeScreen(
     BackHandler(enabled = showArchived) { showArchived = false }
 
     LargeTitleScaffold(
-        title = stringResource(if (showArchived) R.string.archived_title else R.string.library),
+        title = stringResource(if (showArchived) Res.string.archived_title else Res.string.library),
         modifier = modifier,
         state = titleState,
         navigationIcon = {
             if (showArchived) {
                 IconCircleButton(
                     icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = stringResource(R.string.back_to_library),
+                    contentDescription = stringResource(Res.string.back_to_library),
                     onClick = { showArchived = false }
                 )
             } else {
@@ -127,14 +129,14 @@ fun HomeScreen(
                     IconCircleButton(
                         icon = if (isListView) Icons.Rounded.GridView else Icons.AutoMirrored.Rounded.List,
                         contentDescription = stringResource(
-                            if (isListView) R.string.switch_to_shelf_view else R.string.switch_to_list_view
+                            if (isListView) Res.string.switch_to_shelf_view else Res.string.switch_to_list_view
                         ),
                         onClick = { scope.launch { userPreferences.setIsListView(!isListView) } }
                     )
                 }
                 IconCircleButton(
                     icon = Icons.Rounded.Add,
-                    contentDescription = stringResource(R.string.add_book),
+                    contentDescription = stringResource(Res.string.add_book),
                     onClick = { showAddSheet = true },
                     style = IconButtonStyle.Filled
                 )
@@ -185,9 +187,9 @@ fun HomeScreen(
             body == HomeBody.EMPTY -> Box(modifier = Modifier.fillMaxSize()) {
                 HomeEmptyState(
                     icon = Icons.Rounded.AutoStories,
-                    title = stringResource(R.string.empty_library_title),
-                    message = stringResource(R.string.empty_library_message),
-                    actionText = stringResource(R.string.add_book),
+                    title = stringResource(Res.string.empty_library_title),
+                    message = stringResource(Res.string.empty_library_message),
+                    actionText = stringResource(Res.string.add_book),
                     actionIcon = Icons.Rounded.Add,
                     onAction = { showAddSheet = true },
                     modifier = Modifier
@@ -240,6 +242,7 @@ fun HomeScreen(
 
         if (showAddSheet) {
             AddBookSheet(
+                imageStorage = imageStorage,
                 onDismissRequest = { showAddSheet = false },
                 onSave = { title, author, totalPages, coverImagePath, accentColorIndex, coverColorArgb ->
                     viewModel.addBook(

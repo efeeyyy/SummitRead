@@ -1,6 +1,5 @@
 package com.example.summitread
 
-import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -24,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -33,7 +31,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.SharedTransitionScope
 import com.example.summitread.data.BookRepository
+import com.example.summitread.data.ImageStorage
 import com.example.summitread.data.UserPreferences
 import com.example.summitread.theme.AppMotion
 import com.example.summitread.ui.components.GlassTabBar
@@ -42,18 +43,39 @@ import com.example.summitread.ui.components.LocalBottomBarHeight
 import com.example.summitread.ui.components.glassSource
 import com.example.summitread.ui.components.rememberGlassState
 import com.example.summitread.ui.home.HomeScreen
-import com.example.summitread.ui.mountain.MountainScreen
-import com.example.summitread.ui.profile.ProfileScreen
+import com.example.summitread.resources.Res
+import com.example.summitread.resources.library
+import com.example.summitread.resources.profile
+import org.jetbrains.compose.resources.stringResource
 
 /** Root destinations shown as tabs. The Mountain screen is deeper in the Library (Home) stack. */
 private val TabRoutes: List<Any> = listOf(HomeRoute, ProfileRoute)
 
+/**
+ * What the app shell hands the Mountain screen slot. The shell owns the shared-element scopes (so the cover can
+ * morph into the mountain) and the focus-mode flag (which hides the tab bar).
+ */
+@OptIn(ExperimentalSharedTransitionApi::class)
+class MountainSlotScope(
+    val bookId: Long,
+    val sharedTransitionScope: SharedTransitionScope,
+    val animatedVisibilityScope: AnimatedVisibilityScope,
+    val onFocusModeChange: (Boolean) -> Unit,
+    val onNavigateBack: () -> Unit
+)
+
+/**
+ * The app shell: Home + Mountain + Profile in a [NavHost] with the floating glass tab bar. Mountain and Profile are
+ * injected as slots until they move to commonMain (KMP phase B steps 3 and 4).
+ */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun SummitReadApp(
     bookRepository: BookRepository,
     userPreferences: UserPreferences,
-    @Suppress("UNUSED_PARAMETER") context: Context
+    imageStorage: ImageStorage,
+    mountainContent: @Composable (MountainSlotScope) -> Unit,
+    profileContent: @Composable () -> Unit
 ) {
     val navController = rememberNavController()
     // Set by the Mountain screen; only honoured while that screen is the current destination, so a leftover
@@ -66,8 +88,8 @@ fun SummitReadApp(
     // Mountain lives inside the Library stack, so the Library tab stays highlighted there.
     val selectedIndex = if (currentDestination?.hasRoute(ProfileRoute::class) == true) 1 else 0
 
-    val libraryLabel = stringResource(R.string.library)
-    val profileLabel = stringResource(R.string.profile)
+    val libraryLabel = stringResource(Res.string.library)
+    val profileLabel = stringResource(Res.string.profile)
     val tabItems = remember(libraryLabel, profileLabel) {
         listOf(
             GlassTabItem(libraryLabel, Icons.Rounded.AutoStories),
@@ -97,6 +119,7 @@ fun SummitReadApp(
                         HomeScreen(
                             bookRepository = bookRepository,
                             userPreferences = userPreferences,
+                            imageStorage = imageStorage,
                             sharedTransitionScope = this@SharedTransitionLayout,
                             animatedVisibilityScope = this@composable,
                             onNavigateToMountain = { bookId ->
@@ -107,21 +130,18 @@ fun SummitReadApp(
                         )
                     }
                     composable<MountainRoute> { backStackEntry ->
-                        MountainScreen(
-                            bookId = backStackEntry.toRoute<MountainRoute>().bookId,
-                            bookRepository = bookRepository,
-                            userPreferences = userPreferences,
-                            sharedTransitionScope = this@SharedTransitionLayout,
-                            animatedVisibilityScope = this@composable,
-                            onFocusModeChange = { focused -> isFocusMode = focused },
-                            onNavigateBack = { navController.popBackStack() }
+                        mountainContent(
+                            MountainSlotScope(
+                                bookId = backStackEntry.toRoute<MountainRoute>().bookId,
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = this@composable,
+                                onFocusModeChange = { focused -> isFocusMode = focused },
+                                onNavigateBack = { navController.popBackStack() }
+                            )
                         )
                     }
                     composable<ProfileRoute> {
-                        ProfileScreen(
-                            bookRepository = bookRepository,
-                            userPreferences = userPreferences
-                        )
+                        profileContent()
                     }
                 }
             }

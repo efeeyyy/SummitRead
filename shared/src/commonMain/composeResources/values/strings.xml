@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Navigation shell + Home redesign (own file so it never conflicts with strings.xml edits). -->
+    <!-- Strings used by the shared UI (Home + navigation shell). English only, same texts as before the KMP move. -->
     <string name="library">Library</string>
+    <string name="profile">Profile</string>
+    <string name="add_book">Add Book</string>
+    <string name="title">Title</string>
+    <string name="author">Author</string>
+    <string name="total_pages">Total Pages</string>
+    <string name="select_cover">Select Cover Image</string>
+    <string name="cancel">Cancel</string>
     <string name="archived_title">Archived</string>
     <string name="archived_entry">Archived</string>
     <string name="back_to_library">Back to library</string>
@@ -13,7 +20,7 @@
     <string name="empty_archive_title">No archived books</string>
     <string name="empty_archive_message">Books you archive appear here. Their reading history is kept.</string>
     <string name="archive_book_title">Archive book?</string>
-    <string name="archive_book_message">\"%1$s\" will be hidden from your shelf and list. Your reading sessions, notes and relics are kept, and you can unarchive it any time from Archived.</string>
+    <string name="archive_book_message">"%1$s" will be hidden from your shelf and list. Your reading sessions, notes and relics are kept, and you can unarchive it any time from Archived.</string>
     <string name="archive">Archive</string>
     <string name="archive_book_label">Archive book</string>
     <string name="unarchive">Unarchive</string>
@@ -24,11 +31,11 @@
     <string name="move_up">Move up</string>
     <string name="move_down">Move down</string>
     <string name="cover_of">Cover of %1$s</string>
-    <string name="percent_read">%1$d%% Read</string>
+    <string name="percent_read">%1$d% Read</string>
     <string name="book_by_author">%1$s by %2$s</string>
-    <string name="book_read_percent">%1$d%% read</string>
+    <string name="book_read_percent">%1$d% read</string>
     <string name="book_completed">completed</string>
-    <string name="author_and_percent">%1$s · %2$d%% Read</string>
+    <string name="author_and_percent">%1$s · %2$d% Read</string>
     <string name="cover_color">Cover Color</string>
     <string name="cover_preview">Cover preview</string>
     <string name="color_preview">Color preview</string>

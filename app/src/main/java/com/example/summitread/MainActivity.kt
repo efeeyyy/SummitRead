@@ -18,6 +18,8 @@ import com.example.summitread.data.ThemeMode
 import com.example.summitread.platform.AndroidAppContainer
 import com.example.summitread.theme.AccentColor
 import com.example.summitread.theme.SummitReadTheme
+import com.example.summitread.ui.mountain.MountainScreen
+import com.example.summitread.ui.profile.ProfileScreen
 import androidx.lifecycle.lifecycleScope
 import com.example.summitread.notifications.NotificationChannels
 import com.example.summitread.platform.StreakReminders
@@ -95,7 +97,24 @@ class MainActivity : ComponentActivity() {
                     SummitReadApp(
                         bookRepository = bookRepository,
                         userPreferences = userPreferences,
-                        context = applicationContext
+                        imageStorage = container.imageStorage,
+                        mountainContent = { slot ->
+                            MountainScreen(
+                                bookId = slot.bookId,
+                                bookRepository = bookRepository,
+                                userPreferences = userPreferences,
+                                sharedTransitionScope = slot.sharedTransitionScope,
+                                animatedVisibilityScope = slot.animatedVisibilityScope,
+                                onFocusModeChange = slot.onFocusModeChange,
+                                onNavigateBack = slot.onNavigateBack
+                            )
+                        },
+                        profileContent = {
+                            ProfileScreen(
+                                bookRepository = bookRepository,
+                                userPreferences = userPreferences
+                            )
+                        }
                     )
                 }
             }

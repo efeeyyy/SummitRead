@@ -15,7 +15,8 @@ import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import com.example.summitread.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,7 +29,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import com.example.summitread.theme.AppShapes
-import com.example.summitread.R
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme
@@ -49,12 +49,12 @@ fun ArchiveConfirmDialog(
     onDismiss: () -> Unit
 ) {
     AppAlertDialog(
-        title = stringResource(R.string.archive_book_title),
-        message = stringResource(R.string.archive_book_message, bookTitle),
+        title = stringResource(Res.string.archive_book_title),
+        message = stringResource(Res.string.archive_book_message, bookTitle),
         onDismissRequest = onDismiss,
         actions = listOf(
-            AlertAction(stringResource(R.string.archive), onConfirm, AlertActionStyle.Destructive),
-            AlertAction(stringResource(R.string.cancel), onDismiss, AlertActionStyle.Cancel)
+            AlertAction(stringResource(Res.string.archive), onConfirm, AlertActionStyle.Destructive),
+            AlertAction(stringResource(Res.string.cancel), onDismiss, AlertActionStyle.Cancel)
         )
     )
 }
@@ -70,8 +70,8 @@ fun ArchivedBooksList(
     if (books.isEmpty()) {
         HomeEmptyState(
             icon = Icons.Rounded.Inventory2,
-            title = stringResource(R.string.empty_archive_title),
-            message = stringResource(R.string.empty_archive_message),
+            title = stringResource(Res.string.empty_archive_title),
+            message = stringResource(Res.string.empty_archive_message),
             modifier = modifier
                 .fillMaxSize()
                 .padding(contentPadding)
@@ -89,7 +89,7 @@ fun ArchivedBooksList(
     ) {
         item(key = "archived-section") {
             InsetGroupedSection(
-                footer = stringResource(R.string.archived_footer),
+                footer = stringResource(Res.string.archived_footer),
                 separatorInset = 68.dp
             ) {
                 books.forEach { book -> row { ArchivedRow(book, onUnarchive = { onUnarchive(book) }) } }
@@ -101,7 +101,7 @@ fun ArchivedBooksList(
 @Composable
 private fun ArchivedRow(book: BookEntity, onUnarchive: () -> Unit) {
     val colors = AppTheme.colors
-    val unarchiveLabel = stringResource(R.string.unarchive_book, book.title)
+    val unarchiveLabel = stringResource(Res.string.unarchive_book, book.title)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -119,7 +119,7 @@ private fun ArchivedRow(book: BookEntity, onUnarchive: () -> Unit) {
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = stringResource(R.string.author_and_percent, book.author, bookProgressPercent(book)),
+                text = stringResource(Res.string.author_and_percent, book.author, bookProgressPercent(book)),
                 style = AppType.Subheadline,
                 color = colors.secondaryLabel,
                 maxLines = 1,
@@ -127,7 +127,7 @@ private fun ArchivedRow(book: BookEntity, onUnarchive: () -> Unit) {
             )
         }
         PillButton(
-            text = stringResource(R.string.unarchive),
+            text = stringResource(Res.string.unarchive),
             onClick = onUnarchive,
             style = PillStyle.Tinted,
             size = PillSize.Small,

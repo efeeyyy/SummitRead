@@ -1,8 +1,5 @@
 package com.example.summitread.ui.home
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -42,8 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
+import com.example.summitread.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -51,8 +48,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.example.summitread.R
-import com.example.summitread.platform.AndroidAppContainer
+import com.example.summitread.data.ImageStorage
+import com.example.summitread.platform.rememberImagePicker
 import com.example.summitread.theme.AccentColor
 import com.example.summitread.theme.AppShapes
 import com.example.summitread.theme.AppSpacing
@@ -76,6 +73,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun AddBookSheet(
+    imageStorage: ImageStorage,
     onDismissRequest: () -> Unit,
     onSave: (
         title: String,
@@ -104,27 +102,19 @@ fun AddBookSheet(
     var saving by rememberSaveable { mutableStateOf(false) }
     val hsv = Hsv(hue, saturation, brightness)
 
-    val context = LocalContext.current
-    val imageStorage = remember(context) { AndroidAppContainer.get(context).imageStorage }
     val scope = rememberCoroutineScope()
     val sheetState = rememberAppSheetState()
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            scope.launch {
-                val copied = imageStorage.copyToStorage(uri.toString(), "cover")
-                if (copied != null) {
-                    imageStorage.delete(coverImagePath) // replaced selection: drop the earlier copy
-                    coverImagePath = copied
-                }
+    val imagePicker = rememberImagePicker { uri ->
+        scope.launch {
+            val copied = imageStorage.copyToStorage(uri, "cover")
+            if (copied != null) {
+                imageStorage.delete(coverImagePath) // replaced selection: drop the earlier copy
+                coverImagePath = copied
             }
         }
     }
-    val pickCover = {
-        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-    }
+    val pickCover = { imagePicker.pickImage() }
 
     val pickedColor = if (useCustomColor) hsv.toColor() else AccentColor.entries[selectedColorIndex].lightPrimary
 
@@ -139,7 +129,7 @@ fun AddBookSheet(
 
     AppSheet(
         onDismissRequest = ::dismissed,
-        title = stringResource(R.string.add_book),
+        title = stringResource(Res.string.add_book),
         sheetState = sheetState
     ) {
         Column(
@@ -158,7 +148,7 @@ fun AddBookSheet(
                 CoverImage(
                     path = coverImagePath,
                     contentDescription = stringResource(
-                        if (coverImagePath != null) R.string.cover_preview else R.string.color_preview
+                        if (coverImagePath != null) Res.string.cover_preview else Res.string.color_preview
                     ),
                     modifier = Modifier
                         .size(80.dp, 120.dp)
@@ -167,7 +157,7 @@ fun AddBookSheet(
                                 haptics.light()
                                 pickCover()
                             },
-                            onClickLabel = stringResource(R.string.select_cover),
+                            onClickLabel = stringResource(Res.string.select_cover),
                             role = Role.Button
                         )
                         .appShadow(elevation = 10.dp, shape = previewShape)
@@ -177,7 +167,7 @@ fun AddBookSheet(
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xxs)) {
                     PillButton(
-                        text = stringResource(R.string.select_cover),
+                        text = stringResource(Res.string.select_cover),
                         onClick = { pickCover() },
                         style = PillStyle.Tinted,
                         size = PillSize.Small,
@@ -185,7 +175,7 @@ fun AddBookSheet(
                     )
                     if (coverImagePath != null) {
                         PillButton(
-                            text = stringResource(R.string.remove_cover),
+                            text = stringResource(Res.string.remove_cover),
                             onClick = {
                                 imageStorage.delete(coverImagePath)
                                 coverImagePath = null
@@ -202,7 +192,7 @@ fun AddBookSheet(
                 AppTextField(
                     value = title,
                     onValueChange = { title = it },
-                    placeholder = stringResource(R.string.title),
+                    placeholder = stringResource(Res.string.title),
                     leadingIcon = Icons.Rounded.Book,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
@@ -212,7 +202,7 @@ fun AddBookSheet(
                 AppTextField(
                     value = author,
                     onValueChange = { author = it },
-                    placeholder = stringResource(R.string.author),
+                    placeholder = stringResource(Res.string.author),
                     leadingIcon = Icons.Rounded.Person,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Words,
@@ -222,7 +212,7 @@ fun AddBookSheet(
                 AppTextField(
                     value = totalPages,
                     onValueChange = { totalPages = it.filter { char -> char.isDigit() }.take(6) },
-                    placeholder = stringResource(R.string.total_pages),
+                    placeholder = stringResource(Res.string.total_pages),
                     leadingIcon = Icons.Rounded.Description,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done)
                 )
@@ -231,7 +221,7 @@ fun AddBookSheet(
             // Colour: quick presets (the original palette) and the full colour wheel for any other colour.
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = stringResource(R.string.cover_color).uppercase(),
+                    text = stringResource(Res.string.cover_color).uppercase(),
                     style = AppType.Footnote,
                     color = colors.secondaryLabel,
                     modifier = Modifier.padding(start = AppSpacing.sm)
@@ -252,7 +242,7 @@ fun AddBookSheet(
                     ) {
                         AccentColor.entries.forEachIndexed { index, color ->
                             val selected = !useCustomColor && selectedColorIndex == index
-                            val swatchDescription = stringResource(R.string.color_swatch, color.displayName)
+                            val swatchDescription = stringResource(Res.string.color_swatch, color.displayName)
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
@@ -322,7 +312,7 @@ fun AddBookSheet(
             verticalArrangement = Arrangement.spacedBy(AppSpacing.xxs)
         ) {
             PillButton(
-                text = stringResource(R.string.add_book),
+                text = stringResource(Res.string.add_book),
                 onClick = {
                     if (canSave) {
                         saving = true
@@ -342,7 +332,7 @@ fun AddBookSheet(
                 modifier = Modifier.fillMaxWidth()
             )
             PillButton(
-                text = stringResource(R.string.cancel),
+                text = stringResource(Res.string.cancel),
                 onClick = {
                     scope.launch {
                         sheetState.hide()

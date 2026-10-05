@@ -25,15 +25,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.stringResource
+import com.example.summitread.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.width
-import com.example.summitread.R
 import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
+import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.min
@@ -61,11 +62,11 @@ fun ColorWheelPicker(
     val current by rememberUpdatedState(hsv)
     val change by rememberUpdatedState(onChange)
     val description = stringResource(
-        R.string.color_wheel_description,
+        Res.string.color_wheel_description,
         hsv.hue.toInt(),
         (hsv.saturation * 100).toInt()
     )
-    val brightnessDescription = stringResource(R.string.color_brightness_description)
+    val brightnessDescription = stringResource(Res.string.color_brightness_description)
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Canvas(
@@ -84,7 +85,7 @@ fun ColorWheelPicker(
                             val dx = position.x - center.x
                             val dy = position.y - center.y
                             // Angle measured clockwise from 3 o'clock, matching the sweep gradient below.
-                            val degrees = Math.toDegrees(atan2(dy, dx).toDouble()).toFloat()
+                            val degrees = (atan2(dy, dx).toDouble() * 180.0 / PI).toFloat()
                             val hue = if (degrees < 0f) degrees + 360f else degrees
                             val saturation = min(sqrt(dx * dx + dy * dy) / radius, 1f)
                             change(Hsv(hue, saturation, current.value))
@@ -142,7 +143,7 @@ fun ColorWheelPicker(
                             style = Stroke(width = 1.dp.toPx())
                         )
                         // Selector ring at the picked hue/saturation.
-                        val angle = Math.toRadians(current.hue.toDouble())
+                        val angle = current.hue.toDouble() * PI / 180.0
                         val selectorCenter = Offset(
                             center.x + (cos(angle) * current.saturation * radius).toFloat(),
                             center.y + (sin(angle) * current.saturation * radius).toFloat()
@@ -169,7 +170,7 @@ fun ColorWheelPicker(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                stringResource(R.string.color_brightness),
+                stringResource(Res.string.color_brightness),
                 style = AppType.Footnote,
                 color = colors.secondaryLabel
             )

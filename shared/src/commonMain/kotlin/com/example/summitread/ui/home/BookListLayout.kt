@@ -42,14 +42,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.res.stringResource
+import com.example.summitread.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.example.summitread.R
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.theme.AppMotion
 import com.example.summitread.theme.AppTheme
@@ -251,8 +251,8 @@ private fun BookListItem(
     // The card lifts slightly while it is being dragged.
     val lift by animateFloatAsState(if (isDragged) 1.03f else 1f, AppMotion.snappy(), label = "dragLift")
 
-    val moveUpLabel = stringResource(R.string.move_up)
-    val moveDownLabel = stringResource(R.string.move_down)
+    val moveUpLabel = stringResource(Res.string.move_up)
+    val moveDownLabel = stringResource(Res.string.move_down)
 
     with(sharedTransitionScope) {
         Box(modifier = modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
@@ -281,7 +281,7 @@ private fun BookListItem(
                     haptics.light()
                     onClick()
                 },
-                onClickLabel = stringResource(R.string.open_book, book.title),
+                onClickLabel = stringResource(Res.string.open_book, book.title),
                 contentPadding = PaddingValues(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -328,7 +328,7 @@ private fun BookListItem(
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                text = stringResource(R.string.percent_read, percent),
+                                text = stringResource(Res.string.percent_read, percent),
                                 style = AppType.Footnote.tabularNumbers(),
                                 color = colors.secondaryLabel,
                                 maxLines = 1
@@ -339,14 +339,14 @@ private fun BookListItem(
                     Box {
                         IconCircleButton(
                             icon = Icons.Rounded.MoreHoriz,
-                            contentDescription = stringResource(R.string.more_options_for, book.title),
+                            contentDescription = stringResource(Res.string.more_options_for, book.title),
                             onClick = { menuOpen = true },
                             style = IconButtonStyle.Plain,
                             tint = colors.secondaryLabel
                         )
                         AppMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                             AppMenuItem(
-                                text = stringResource(R.string.archive),
+                                text = stringResource(Res.string.archive),
                                 icon = Icons.Rounded.Inventory2,
                                 onClick = {
                                     menuOpen = false

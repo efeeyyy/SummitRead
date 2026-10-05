@@ -70,9 +70,6 @@ dependencies {
   // Design system: frosted glass (KMP-compatible)
   implementation(libs.haze)
 
-  // Navigation
-  implementation(libs.navigation.compose)
-  implementation(libs.kotlinx.serialization.json)
 
   // WorkManager
   implementation(libs.androidx.work.runtime.ktx)

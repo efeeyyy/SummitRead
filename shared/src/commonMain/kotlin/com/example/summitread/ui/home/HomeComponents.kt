@@ -28,8 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import com.example.summitread.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -38,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.summitread.R
 import com.example.summitread.theme.AppMotion
 import com.example.summitread.theme.AppShapes
 import com.example.summitread.theme.AppTheme
@@ -70,7 +70,7 @@ fun StreakBadge(streak: Int, modifier: Modifier = Modifier) {
             bump.animateTo(1f, AppMotion.standard())
         }
     }
-    val description = pluralStringResource(R.plurals.streak_days, streak, streak)
+    val description = pluralStringResource(Res.plurals.streak_days, streak, streak)
     Row(
         modifier = modifier
             .clip(AppShapes.pill)
@@ -112,7 +112,7 @@ fun SortChip(
     val colors = AppTheme.colors
     val haptics = rememberAppHaptics()
     var open by remember { mutableStateOf(false) }
-    val label = stringResource(R.string.sort_prefix, current.label)
+    val label = stringResource(Res.string.sort_prefix, current.label)
     Box(modifier) {
         Row(
             modifier = Modifier
@@ -170,7 +170,7 @@ fun SortChip(
 /** "12 books" caption, singular aware. */
 @Composable
 fun bookCountText(count: Int): String =
-    pluralStringResource(R.plurals.book_count, count, count)
+    pluralStringResource(Res.plurals.book_count, count, count)
 
 /** Entry row to the archived books at the end of the library (inset grouped, like an iOS Settings row). */
 @Composable
@@ -182,7 +182,7 @@ fun ArchivedEntry(
     InsetGroupedSection(modifier = modifier, separatorInset = 58.dp) {
         row {
             GroupedRow(
-                title = stringResource(R.string.archived_entry),
+                title = stringResource(Res.string.archived_entry),
                 leadingIcon = Icons.Rounded.Inventory2,
                 leadingTint = AppTheme.colors.secondaryLabel,
                 trailing = RowTrailing.ValueChevron(count.toString()),
@@ -205,7 +205,7 @@ fun CoverThumbnail(
     val shape = RoundedCornerShape(corner)
     CoverImage(
         path = book.coverImagePath,
-        contentDescription = if (describe) stringResource(R.string.cover_of, book.title) else null,
+        contentDescription = if (describe) stringResource(Res.string.cover_of, book.title) else null,
         modifier = modifier
             .size(width, height)
             .appShadow(elevation = 4.dp, shape = shape)
