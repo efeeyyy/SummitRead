@@ -1,6 +1,5 @@
 package com.example.summitread.ui.mountain
 
-import android.graphics.Paint
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -43,8 +42,14 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -56,7 +61,9 @@ import com.example.summitread.data.db.NoteEntity
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -153,7 +160,7 @@ class MountainGeometry(
 
     fun tangentDegAt(fraction: Float): Float {
         val t = measure.getTangent(length * fraction.coerceIn(0f, 1f))
-        return Math.toDegrees(atan2(t.y.toDouble(), t.x.toDouble())).toFloat()
+        return (atan2(t.y.toDouble(), t.x.toDouble()) * (180.0 / PI)).toFloat()
     }
 
     fun segment(fraction: Float, dest: Path) {
@@ -214,20 +221,25 @@ private fun rememberHourOfDay(): State<Float> = produceState(initialValue = curr
 }
 
 private fun currentHour(): Float {
-    val now = LocalTime.now()
+    val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time
     return now.hour + now.minute / 60f
 }
 
-private class EmojiPaints(unit: Float) {
-    val flag = emojiPaint(22f * unit)
-    val tent = emojiPaint(20f * unit)
-    val camp = emojiPaint(32f * unit)
+private val EmojiBrush = SolidColor(Color.Black)
 
-    private fun emojiPaint(size: Float) = Paint().apply {
-        textSize = size
-        textAlign = Paint.Align.CENTER
-        isAntiAlias = true
-    }
+/** Emoji drawn with text layouts measured once (no `android.graphics.Paint`); sizes are in px, like the old paints. */
+private class EmojiLayouts(measurer: TextMeasurer, density: Density, unit: Float) {
+    val flag = emoji(measurer, density, "🚩", 22f * unit)
+    val tent = emoji(measurer, density, "⛺", 20f * unit)
+    val camp = emoji(measurer, density, "⛺", 32f * unit)
+
+    private fun emoji(measurer: TextMeasurer, density: Density, text: String, sizePx: Float): TextLayoutResult =
+        measurer.measure(text, TextStyle(fontSize = with(density) { sizePx.toSp() }))
+}
+
+/** Draws [layout] horizontally centred on [x] with its baseline at [y] (same anchor as `Paint.Align.CENTER`). */
+private fun DrawScope.drawEmoji(layout: TextLayoutResult, x: Float, y: Float, alpha: Float) {
+    drawText(layout, EmojiBrush, Offset(x - layout.size.width / 2f, y - layout.firstBaseline), alpha)
 }
 
 /**
@@ -358,7 +370,9 @@ fun MountainCanvas(
             0.20f, 0.42f, 1.0f, 8f
         )
     }
-    val paints = remember(unit) { EmojiPaints(unit) }
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val emojis = remember(unit, textMeasurer) { EmojiLayouts(textMeasurer, density, unit) }
     val climbedPath = remember { Path() }
     val trailStroke = remember(unit) {
         Stroke(width = 2.5f * unit, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f * unit, 10f * unit), 0f))
@@ -545,13 +559,12 @@ fun MountainCanvas(
                 drawPath(g.trees, treeColor)
 
                 // Summit flag
-                canvas.nativeCanvas.drawText("🚩", g.peak.x + 5f * unit, g.peak.y + 3f * unit, paints.flag)
+                drawEmoji(emojis.flag, g.peak.x + 5f * unit, g.peak.y + 3f * unit, 1f)
 
                 // Milestone tents
                 for (i in g.milestones.indices) {
                     val m = g.milestones[i]
-                    paints.tent.alpha = if (target >= m.first) 255 else 140
-                    canvas.nativeCanvas.drawText("⛺", m.second.x, m.second.y + 2f * unit, paints.tent)
+                    drawEmoji(emojis.tent, m.second.x, m.second.y + 2f * unit, if (target >= m.first) 1f else 140f / 255f)
                 }
 
                 // Storm clouds + fog around the summit (#20); wind blows them away when pages are logged
@@ -597,8 +610,7 @@ fun MountainCanvas(
                     )
                 }
                 if (camp > 0.01f) {
-                    paints.camp.alpha = (camp * 255).toInt()
-                    canvas.nativeCanvas.drawText("⛺", cx, cy + 2f * unit, paints.camp)
+                    drawEmoji(emojis.camp, cx, cy + 2f * unit, camp)
                 }
                 canvas.restore()
             }

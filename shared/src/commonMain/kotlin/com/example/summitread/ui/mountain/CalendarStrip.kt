@@ -38,7 +38,11 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.summitread.data.StreakCalculator
 import com.example.summitread.data.db.ReadingSessionEntity
+import com.example.summitread.platform.rememberDateFormatter
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.plus
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
@@ -46,9 +50,6 @@ import com.example.summitread.theme.rememberAppHaptics
 import com.example.summitread.theme.tabularNumbers
 import com.example.summitread.ui.components.pressScale
 import androidx.compose.foundation.clickable
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
 
 private const val PAST_DAYS = 30
 private const val FUTURE_DAYS = 14
@@ -69,11 +70,9 @@ fun CalendarStrip(
     val colors = AppTheme.colors
     val haptics = rememberAppHaptics()
     val days = remember(today) {
-        val cal = Calendar.getInstance()
+        val todayDate = StreakCalculator.toLocalDate(today)
         (0..(PAST_DAYS + FUTURE_DAYS)).map { i ->
-            cal.timeInMillis = today
-            cal.add(Calendar.DAY_OF_YEAR, i - PAST_DAYS)
-            startOfDay(cal.timeInMillis)
+            StreakCalculator.startOfDayMillis(todayDate.plus(i - PAST_DAYS, DateTimeUnit.DAY))
         }
     }
 
@@ -86,9 +85,9 @@ fun CalendarStrip(
         listState.animateScrollToItem(PAST_DAYS - 2)
     }
 
-    val dayOfWeekFormat = remember { SimpleDateFormat("EEE", Locale.getDefault()) }
-    val dayNumberFormat = remember { SimpleDateFormat("d", Locale.getDefault()) }
-    val fullFormat = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()) }
+    val dayOfWeekFormat = rememberDateFormatter("EEE")
+    val dayNumberFormat = rememberDateFormatter("d")
+    val fullFormat = rememberDateFormatter("EEEE, MMM d")
 
     LazyRow(
         state = listState,
@@ -101,7 +100,6 @@ fun CalendarStrip(
             val isFuture = dayMillis > today
             val isSelected = dayMillis == startOfDay(selectedDate)
             val hasSession = dayMillis in sessionDates
-            val date = java.util.Date(dayMillis)
 
             val circleColor by animateColorAsState(
                 targetValue = when {
@@ -129,7 +127,7 @@ fun CalendarStrip(
                     .pressScale(interaction, enabled = !isFuture)
                     .semantics(mergeDescendants = true) {
                         contentDescription = buildString {
-                            append(fullFormat.format(date))
+                            append(fullFormat.format(dayMillis))
                             if (isToday) append(", today")
                             if (hasSession) append(", pages logged")
                             if (isFuture) append(", not available yet")
@@ -147,7 +145,7 @@ fun CalendarStrip(
                     }
             ) {
                 Text(
-                    text = dayOfWeekFormat.format(date).uppercase(),
+                    text = dayOfWeekFormat.format(dayMillis).uppercase(),
                     style = AppType.Caption2,
                     color = if (isToday) colors.tint else colors.secondaryLabel
                 )
@@ -161,7 +159,7 @@ fun CalendarStrip(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = dayNumberFormat.format(date),
+                        text = dayNumberFormat.format(dayMillis),
                         style = AppType.Headline.tabularNumbers().copy(
                             fontWeight = if (isToday || isSelected) FontWeight.SemiBold else FontWeight.Normal
                         ),

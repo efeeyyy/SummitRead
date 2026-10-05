@@ -1,9 +1,7 @@
 package com.example.summitread.ui.mountain
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import androidx.activity.compose.BackHandler
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
@@ -58,17 +56,18 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.summitread.R
+import com.example.summitread.data.ImageStorage
+import com.example.summitread.platform.LocalReadingTimer
+import com.example.summitread.platform.StatusBarIcons
+import com.example.summitread.resources.Res
+import com.example.summitread.resources.no_active_book
+import org.jetbrains.compose.resources.stringResource
 import com.example.summitread.data.BookRepository
 import com.example.summitread.data.UserPreferences
-import com.example.summitread.services.ReadingTimerService
 import com.example.summitread.platform.TimerStatus
 import com.example.summitread.theme.AccentColor
 import com.example.summitread.theme.AppSpacing
@@ -92,12 +91,13 @@ private val SceneHeight = 236.dp
 /** In focus mode the notes sheet starts at this fraction of the canvas height (the camp stays visible above it). */
 private const val FOCUS_SHEET_TOP = 0.62f
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun MountainScreen(
     bookId: Long,
     bookRepository: BookRepository,
     userPreferences: UserPreferences,
+    imageStorage: ImageStorage,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onFocusModeChange: (Boolean) -> Unit,
@@ -124,9 +124,10 @@ fun MountainScreen(
     val hoursSinceLastSession by viewModel.hoursSinceLastSession.collectAsStateWithLifecycle()
     val currentStreak by viewModel.currentStreak.collectAsStateWithLifecycle()
 
+    val readingTimer = LocalReadingTimer.current
     // Only changes when this book's timer starts/stops running, so the screen does not recompose every second
-    val timerRunning by remember(bookId) {
-        ReadingTimerService.state
+    val timerRunning by remember(bookId, readingTimer) {
+        readingTimer.state
             .map { it.status == TimerStatus.RUNNING && it.bookId == bookId }
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
@@ -181,7 +182,7 @@ fun MountainScreen(
 
     val colors = AppTheme.colors
     val dark = colors.isDark
-    StatusBarIconsFollowSky(if (overGlassHeader && !isFocusMode) !dark else skyIsLight, isFocusMode)
+    StatusBarIcons(if (overGlassHeader && !isFocusMode) !dark else skyIsLight, isFocusMode)
     val book = activeBook
 
     Box(
@@ -377,6 +378,7 @@ fun MountainScreen(
                                     book = book,
                                     notes = notes,
                                     characters = characters,
+                                    imageStorage = imageStorage,
                                     onAddNote = viewModel::addNote,
                                     onDeleteNote = viewModel::deleteNote,
                                     onAddCharacter = viewModel::addCharacter,
@@ -473,7 +475,7 @@ private fun LoadingOrMissing(onBack: () -> Unit, modifier: Modifier = Modifier) 
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (showMissing) {
                 Text(
-                    text = stringResource(R.string.no_active_book),
+                    text = stringResource(Res.string.no_active_book),
                     textAlign = TextAlign.Center,
                     style = AppType.Body,
                     color = colors.secondaryLabel,
@@ -486,39 +488,3 @@ private fun LoadingOrMissing(onBack: () -> Unit, modifier: Modifier = Modifier) 
     }
 }
 
-// ---- Status bar icon colour -------------------------------------------------------------------------------------
-
-
-private fun Context.findActivity(): Activity? {
-    var c: Context? = this
-    while (c is ContextWrapper) {
-        if (c is Activity) return c
-        c = c.baseContext
-    }
-    return null
-}
-
-/**
- * The canvas is full-bleed, so the status bar sits on the sky: dark icons on a light sky, light icons on a dark
- * one (also in focus mode); over the glass header it follows the app theme. [light] = the surface behind the
- * icons is light. The previous appearance is restored when the screen is left.
- */
-@Composable
-private fun StatusBarIconsFollowSky(light: Boolean?, reapplyKey: Any? = null) {
-    val view = LocalView.current
-    DisposableEffect(view) {
-        val window = view.context.findActivity()?.window
-        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
-        val original = controller?.isAppearanceLightStatusBars
-        onDispose {
-            if (controller != null && original != null) controller.isAppearanceLightStatusBars = original
-        }
-    }
-    DisposableEffect(view, light, reapplyKey) {
-        if (light != null) {
-            val window = view.context.findActivity()?.window
-            if (window != null) WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = light
-        }
-        onDispose { }
-    }
-}

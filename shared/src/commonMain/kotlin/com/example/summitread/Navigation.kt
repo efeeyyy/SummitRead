@@ -36,6 +36,8 @@ import androidx.compose.animation.SharedTransitionScope
 import com.example.summitread.data.BookRepository
 import com.example.summitread.data.ImageStorage
 import com.example.summitread.data.UserPreferences
+import com.example.summitread.platform.LocalReadingTimer
+import com.example.summitread.platform.ReadingTimer
 import com.example.summitread.theme.AppMotion
 import com.example.summitread.ui.components.GlassTabBar
 import com.example.summitread.ui.components.GlassTabItem
@@ -43,6 +45,7 @@ import com.example.summitread.ui.components.LocalBottomBarHeight
 import com.example.summitread.ui.components.glassSource
 import com.example.summitread.ui.components.rememberGlassState
 import com.example.summitread.ui.home.HomeScreen
+import com.example.summitread.ui.mountain.MountainScreen
 import com.example.summitread.resources.Res
 import com.example.summitread.resources.library
 import com.example.summitread.resources.profile
@@ -52,21 +55,10 @@ import org.jetbrains.compose.resources.stringResource
 private val TabRoutes: List<Any> = listOf(HomeRoute, ProfileRoute)
 
 /**
- * What the app shell hands the Mountain screen slot. The shell owns the shared-element scopes (so the cover can
- * morph into the mountain) and the focus-mode flag (which hides the tab bar).
- */
-@OptIn(ExperimentalSharedTransitionApi::class)
-class MountainSlotScope(
-    val bookId: Long,
-    val sharedTransitionScope: SharedTransitionScope,
-    val animatedVisibilityScope: AnimatedVisibilityScope,
-    val onFocusModeChange: (Boolean) -> Unit,
-    val onNavigateBack: () -> Unit
-)
-
-/**
- * The app shell: Home + Mountain + Profile in a [NavHost] with the floating glass tab bar. Mountain and Profile are
- * injected as slots until they move to commonMain (KMP phase B steps 3 and 4).
+ * The app shell: Home + Mountain + Profile in a [NavHost] with the floating glass tab bar. The shell owns the
+ * shared-element scopes (the cover morphs into the mountain) and the focus-mode flag (which hides the tab bar).
+ * Profile is injected as a slot until it moves to commonMain (KMP phase B step 4). [readingTimer] is the platform
+ * timer (Android foreground service / iOS in-app timer), exposed to the screens through [LocalReadingTimer].
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -74,7 +66,7 @@ fun SummitReadApp(
     bookRepository: BookRepository,
     userPreferences: UserPreferences,
     imageStorage: ImageStorage,
-    mountainContent: @Composable (MountainSlotScope) -> Unit,
+    readingTimer: ReadingTimer,
     profileContent: @Composable () -> Unit
 ) {
     val navController = rememberNavController()
@@ -108,7 +100,10 @@ fun SummitReadApp(
     )
 
     Box(Modifier.fillMaxSize()) {
-        CompositionLocalProvider(LocalBottomBarHeight provides barHeight) {
+        CompositionLocalProvider(
+            LocalBottomBarHeight provides barHeight,
+            LocalReadingTimer provides readingTimer
+        ) {
             SharedTransitionLayout(Modifier.fillMaxSize().glassSource(glass)) {
                 NavHost(
                     navController = navController,
@@ -130,14 +125,15 @@ fun SummitReadApp(
                         )
                     }
                     composable<MountainRoute> { backStackEntry ->
-                        mountainContent(
-                            MountainSlotScope(
-                                bookId = backStackEntry.toRoute<MountainRoute>().bookId,
-                                sharedTransitionScope = this@SharedTransitionLayout,
-                                animatedVisibilityScope = this@composable,
-                                onFocusModeChange = { focused -> isFocusMode = focused },
-                                onNavigateBack = { navController.popBackStack() }
-                            )
+                        MountainScreen(
+                            bookId = backStackEntry.toRoute<MountainRoute>().bookId,
+                            bookRepository = bookRepository,
+                            userPreferences = userPreferences,
+                            imageStorage = imageStorage,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this@composable,
+                            onFocusModeChange = { focused -> isFocusMode = focused },
+                            onNavigateBack = { navController.popBackStack() }
                         )
                     }
                     composable<ProfileRoute> {

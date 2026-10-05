@@ -1,16 +1,8 @@
 <resources>
     <string name="app_name">SummitRead</string>
     <string name="profile">Profile</string>
-    <string name="save">Save</string>
-    <string name="note_content">Write your thoughts...</string>
-    <string name="attach_photo">Attach Photo</string>
-    <string name="add_character">Add Character</string>
-    <string name="character_name">Character Name</string>
-    <string name="character_role">Role</string>
-    <string name="character_description">Description</string>
     <string name="relic_showcase">Relic Showcase</string>
     <string name="no_relics_yet">No summits conquered yet! Start reading 📖</string>
     <string name="books_completed">Books Completed</string>
     <string name="total_pages_read">Total Pages Read</string>
-    <string name="no_active_book">Select a book from the shelf to start climbing!</string>
 </resources>

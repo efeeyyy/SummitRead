@@ -12,8 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.summitread.data.ElapsedTimeFormat
 import com.example.summitread.data.db.NoteEntity
-import com.example.summitread.services.ReadingTimerService
+import com.example.summitread.platform.rememberDateFormatter
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
@@ -24,9 +25,6 @@ import com.example.summitread.ui.components.PillButton
 import com.example.summitread.ui.components.PillStyle
 import com.example.summitread.ui.components.ProgressRing
 import com.example.summitread.ui.components.RowTrailing
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Sheet opened by tapping a camp (25 / 50 / 75 %): a progress ring, a motivational line and the stats up to that
@@ -39,7 +37,7 @@ fun MilestoneDialog(
     onDismiss: () -> Unit
 ) {
     val colors = AppTheme.colors
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val dateFormat = rememberDateFormatter("MMM d, yyyy")
     val percent = (stats.fraction * 100).toInt()
     val quote = remember(bookId, stats.fraction) { MilestoneQuotes.quoteFor(stats.fraction, bookId) }
 
@@ -71,14 +69,14 @@ fun MilestoneDialog(
             if (stats.reached) {
                 row { GroupedRow("Status", trailing = RowTrailing.Value("Reached")) }
                 stats.reachedOnMillis?.let {
-                    row { GroupedRow("Reached on", trailing = RowTrailing.Value(dateFormat.format(Date(it)))) }
+                    row { GroupedRow("Reached on", trailing = RowTrailing.Value(dateFormat.format(it))) }
                 }
                 row { GroupedRow("Sessions to get here", trailing = RowTrailing.Value("${stats.sessionsToReach}")) }
                 if (stats.timeSpentMillis > 0L) {
                     row {
                         GroupedRow(
                             "Time reading",
-                            trailing = RowTrailing.Value(ReadingTimerService.formatElapsed(stats.timeSpentMillis))
+                            trailing = RowTrailing.Value(ElapsedTimeFormat.format(stats.timeSpentMillis))
                         )
                     }
                 }

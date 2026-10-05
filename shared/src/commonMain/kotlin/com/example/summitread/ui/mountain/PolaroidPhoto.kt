@@ -22,10 +22,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import com.example.summitread.theme.AppType
-import java.io.File
+import okio.Path.Companion.toPath
 
 /**
  * A warm, sepia instant photo: soft shadow, wide white bottom border with the page number in a serif hand.
@@ -60,7 +59,7 @@ fun PolaroidPhoto(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         AsyncImage(
-            model = File(imagePath).toUri(),
+            model = imagePath.toPath(),
             contentDescription = "Note photo on page $pageNumber",
             contentScale = ContentScale.Crop,
             colorFilter = sepiaFilter,

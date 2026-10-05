@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.summitread.data.db.NoteEntity
+import com.example.summitread.platform.rememberDateFormatter
 import com.example.summitread.theme.AppMotion
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme
@@ -27,9 +28,6 @@ import com.example.summitread.theme.AppType
 import com.example.summitread.ui.components.CardContainer
 import com.example.summitread.ui.components.IconButtonStyle
 import com.example.summitread.ui.components.IconCircleButton
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Premium note card: page badge + date, the note text and, when there is one, the photo as a slightly tilted
@@ -56,7 +54,7 @@ fun NoteCard(
         }
     }
 
-    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    val dateFormat = rememberDateFormatter("MMM dd, yyyy")
 
     CardContainer(
         modifier = modifier
@@ -72,7 +70,7 @@ fun NoteCard(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
                 MountainChip(text = "p.${note.pageNumber}")
                 Text(
-                    text = dateFormat.format(Date(note.dateCreated)),
+                    text = dateFormat.format(note.dateCreated),
                     style = AppType.Footnote,
                     color = colors.secondaryLabel
                 )

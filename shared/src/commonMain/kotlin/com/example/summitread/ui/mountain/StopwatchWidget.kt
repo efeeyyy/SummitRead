@@ -35,14 +35,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.summitread.data.PageMath
-import com.example.summitread.services.ReadingTimerService
+import com.example.summitread.data.ElapsedTimeFormat
+import com.example.summitread.platform.LocalReadingTimer
 import com.example.summitread.platform.TimerStatus
 import com.example.summitread.theme.AppMotion
 import com.example.summitread.theme.AppSpacing
@@ -70,8 +70,8 @@ fun StopwatchWidget(
     onUseSuggestion: (pages: Int) -> Unit = {},
     onDiscardPending: () -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val timer by ReadingTimerService.state.collectAsState()
+    val readingTimer = LocalReadingTimer.current
+    val timer by readingTimer.state.collectAsState()
     val colors = AppTheme.colors
 
     val boundToThisBook = timer.status != TimerStatus.IDLE && timer.bookId == bookId
@@ -111,7 +111,7 @@ fun StopwatchWidget(
         }
 
         if (!boundToOtherBook) {
-            val time = ReadingTimerService.formatElapsed(shownMillis)
+            val time = ElapsedTimeFormat.format(shownMillis)
             Text(
                 text = time,
                 style = AppType.LargeTitle.copy(fontSize = 48.sp, lineHeight = 56.sp, fontWeight = FontWeight.SemiBold)
@@ -132,7 +132,7 @@ fun StopwatchWidget(
         ) {
             PillButton(
                 text = "Start",
-                onClick = { ReadingTimerService.start(context, bookId) },
+                onClick = { readingTimer.start(bookId) },
                 leadingIcon = Icons.Rounded.PlayArrow,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -155,14 +155,14 @@ fun StopwatchWidget(
                 if (running) {
                     PillButton(
                         text = "Pause",
-                        onClick = { ReadingTimerService.pause(context) },
+                        onClick = { readingTimer.pause() },
                         style = PillStyle.Tinted,
                         leadingIcon = Icons.Rounded.Pause,
                         modifier = Modifier.weight(1f)
                     )
                     PillButton(
                         text = "Stop",
-                        onClick = { ReadingTimerService.stop(context) },
+                        onClick = { readingTimer.stop() },
                         destructive = true,
                         leadingIcon = Icons.Rounded.Stop,
                         modifier = Modifier.weight(1f)
@@ -170,13 +170,13 @@ fun StopwatchWidget(
                 } else {
                     PillButton(
                         text = "Resume",
-                        onClick = { ReadingTimerService.resume(context) },
+                        onClick = { readingTimer.resume() },
                         leadingIcon = Icons.Rounded.PlayArrow,
                         modifier = Modifier.weight(1f)
                     )
                     PillButton(
                         text = "Stop",
-                        onClick = { ReadingTimerService.stop(context) },
+                        onClick = { readingTimer.stop() },
                         style = PillStyle.Tinted,
                         destructive = true,
                         leadingIcon = Icons.Rounded.Stop,
@@ -221,7 +221,7 @@ fun StopwatchWidget(
                 ) {
                     PillButton(
                         text = "Start again",
-                        onClick = { ReadingTimerService.start(context, bookId) },
+                        onClick = { readingTimer.start(bookId) },
                         style = PillStyle.Tinted,
                         size = PillSize.Small,
                         modifier = Modifier.weight(1f)

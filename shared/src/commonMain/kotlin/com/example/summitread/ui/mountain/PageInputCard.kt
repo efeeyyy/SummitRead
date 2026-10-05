@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.summitread.platform.rememberDateFormatter
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
@@ -33,9 +34,6 @@ import com.example.summitread.ui.components.IconButtonStyle
 import com.example.summitread.ui.components.IconCircleButton
 import com.example.summitread.ui.components.LinearProgressCapsule
 import com.example.summitread.ui.components.PillButton
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -56,8 +54,8 @@ fun PageInputCard(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    val dateFormat = remember { SimpleDateFormat("MMM dd", Locale.getDefault()) }
-    val formattedDate = remember(selectedDate) { dateFormat.format(Date(selectedDate)) }
+    val dateFormat = rememberDateFormatter("MMM dd")
+    val formattedDate = remember(selectedDate) { dateFormat.format(selectedDate) }
     val progress = if (totalPages > 0) (currentPages.toFloat() / totalPages.toFloat()).coerceIn(0f, 1f) else 0f
     val percent = (progress * 100).roundToInt()
     val value = pagesInput.toIntOrNull() ?: 0

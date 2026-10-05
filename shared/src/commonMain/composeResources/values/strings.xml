@@ -52,4 +52,13 @@
         <item quantity="one">%1$d book</item>
         <item quantity="other">%1$d books</item>
     </plurals>
+    <!-- Mountain screen -->
+    <string name="save">Save</string>
+    <string name="note_content">Write your thoughts...</string>
+    <string name="attach_photo">Attach Photo</string>
+    <string name="add_character">Add Character</string>
+    <string name="character_name">Character Name</string>
+    <string name="character_role">Role</string>
+    <string name="character_description">Description</string>
+    <string name="no_active_book">Select a book from the shelf to start climbing!</string>
 </resources>

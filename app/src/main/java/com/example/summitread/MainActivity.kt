@@ -18,10 +18,10 @@ import com.example.summitread.data.ThemeMode
 import com.example.summitread.platform.AndroidAppContainer
 import com.example.summitread.theme.AccentColor
 import com.example.summitread.theme.SummitReadTheme
-import com.example.summitread.ui.mountain.MountainScreen
 import com.example.summitread.ui.profile.ProfileScreen
 import androidx.lifecycle.lifecycleScope
 import com.example.summitread.notifications.NotificationChannels
+import com.example.summitread.services.AndroidReadingTimer
 import com.example.summitread.platform.StreakReminders
 import com.example.summitread.worker.WorkManagerReminderScheduler
 import android.Manifest
@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
         val container = AndroidAppContainer.get(applicationContext)
         val bookRepository = container.repository
         val userPreferences = container.preferences
+        val readingTimer = AndroidReadingTimer(applicationContext)
 
         val requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -98,17 +99,7 @@ class MainActivity : ComponentActivity() {
                         bookRepository = bookRepository,
                         userPreferences = userPreferences,
                         imageStorage = container.imageStorage,
-                        mountainContent = { slot ->
-                            MountainScreen(
-                                bookId = slot.bookId,
-                                bookRepository = bookRepository,
-                                userPreferences = userPreferences,
-                                sharedTransitionScope = slot.sharedTransitionScope,
-                                animatedVisibilityScope = slot.animatedVisibilityScope,
-                                onFocusModeChange = slot.onFocusModeChange,
-                                onNavigateBack = slot.onNavigateBack
-                            )
-                        },
+                        readingTimer = readingTimer,
                         profileContent = {
                             ProfileScreen(
                                 bookRepository = bookRepository,

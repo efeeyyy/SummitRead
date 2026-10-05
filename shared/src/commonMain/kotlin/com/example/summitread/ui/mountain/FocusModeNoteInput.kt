@@ -1,8 +1,5 @@
 package com.example.summitread.ui.mountain
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,17 +31,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.summitread.R
-import com.example.summitread.platform.AndroidAppContainer
+import com.example.summitread.data.ImageStorage
 import com.example.summitread.data.db.BookEntity
 import com.example.summitread.data.db.CharacterEntity
 import com.example.summitread.data.db.NoteEntity
+import com.example.summitread.platform.rememberImagePicker
+import com.example.summitread.resources.Res
+import com.example.summitread.resources.add_character
+import com.example.summitread.resources.attach_photo
+import com.example.summitread.resources.character_description
+import com.example.summitread.resources.character_name
+import com.example.summitread.resources.character_role
+import com.example.summitread.resources.note_content
+import com.example.summitread.resources.save
+import org.jetbrains.compose.resources.stringResource
 import com.example.summitread.theme.AppShapes
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme
@@ -73,6 +77,7 @@ fun FocusModeNoteInput(
     onAddNote: (content: String, pageNumber: Int, photoPath: String?) -> Unit,
     onDeleteNote: (NoteEntity) -> Unit,
     onAddCharacter: (name: String, role: String, description: String) -> Unit,
+    imageStorage: ImageStorage,
     onDeleteCharacter: (CharacterEntity) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
@@ -140,7 +145,8 @@ fun FocusModeNoteInput(
                 photoPath = notePhoto,
                 onPhotoPathChange = { notePhoto = it },
                 onAddNote = onAddNote,
-                onDeleteNote = onDeleteNote
+                onDeleteNote = onDeleteNote,
+                imageStorage = imageStorage
             )
         } else {
             CharactersTab(
@@ -192,18 +198,12 @@ private fun NotesTab(
     photoPath: String?,
     onPhotoPathChange: (String?) -> Unit,
     onAddNote: (String, Int, String?) -> Unit,
-    onDeleteNote: (NoteEntity) -> Unit
+    onDeleteNote: (NoteEntity) -> Unit,
+    imageStorage: ImageStorage
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            scope.launch {
-                onPhotoPathChange(AndroidAppContainer.get(context).imageStorage.copyToStorage(uri.toString(), "note"))
-            }
-        }
+    val photoPicker = rememberImagePicker { uri ->
+        scope.launch { onPhotoPathChange(imageStorage.copyToStorage(uri, "note")) }
     }
     val canSave = content.isNotBlank() && (pageInput.toIntOrNull() ?: 0) > 0
 
@@ -218,7 +218,7 @@ private fun NotesTab(
                     AppTextField(
                         value = content,
                         onValueChange = onContentChange,
-                        placeholder = stringResource(R.string.note_content),
+                        placeholder = stringResource(Res.string.note_content),
                         singleLine = false,
                         minLines = 3,
                         maxLines = 6,
@@ -239,12 +239,8 @@ private fun NotesTab(
                         )
                         IconCircleButton(
                             icon = Icons.Rounded.CameraAlt,
-                            contentDescription = stringResource(R.string.attach_photo),
-                            onClick = {
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
+                            contentDescription = stringResource(Res.string.attach_photo),
+                            onClick = photoPicker::pickImage,
                             size = 44.dp
                         )
                     }
@@ -268,7 +264,7 @@ private fun NotesTab(
                     }
 
                     PillButton(
-                        text = stringResource(R.string.save),
+                        text = stringResource(Res.string.save),
                         onClick = {
                             val page = pageInput.toIntOrNull() ?: 0
                             if (content.isNotBlank() && page > 0) {
@@ -319,7 +315,7 @@ private fun CharactersTab(
             CardContainer(modifier = Modifier.fillMaxWidth(), containerColor = colors.groupedBackground) {
                 Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.xs)) {
                     Text(
-                        text = stringResource(R.string.add_character),
+                        text = stringResource(Res.string.add_character),
                         style = AppType.Headline,
                         color = colors.label,
                         modifier = Modifier.padding(bottom = 2.dp)
@@ -327,26 +323,26 @@ private fun CharactersTab(
                     AppTextField(
                         value = name,
                         onValueChange = onNameChange,
-                        placeholder = stringResource(R.string.character_name),
+                        placeholder = stringResource(Res.string.character_name),
                         modifier = Modifier.fillMaxWidth()
                     )
                     AppTextField(
                         value = role,
                         onValueChange = onRoleChange,
-                        placeholder = stringResource(R.string.character_role),
+                        placeholder = stringResource(Res.string.character_role),
                         modifier = Modifier.fillMaxWidth()
                     )
                     AppTextField(
                         value = description,
                         onValueChange = onDescriptionChange,
-                        placeholder = stringResource(R.string.character_description),
+                        placeholder = stringResource(Res.string.character_description),
                         singleLine = false,
                         minLines = 2,
                         maxLines = 4,
                         modifier = Modifier.fillMaxWidth()
                     )
                     PillButton(
-                        text = stringResource(R.string.save),
+                        text = stringResource(Res.string.save),
                         onClick = {
                             if (name.isNotBlank()) {
                                 onAddCharacter(name, role, description)
