@@ -81,3 +81,9 @@ Rota `bookId` taşır; zamanlayıcı kitaba bağlı, tek global sayaç; ClimbTim
 - Oturum günleri sistem saat diliminde saklı başlangıç ms'i; saat dilimi değişirse bir günlük kayma mümkün (kabul edildi).
 - `MountainViewModel.activeBook` ilk karede `null` (Room yüklenene kadar); ekran bu kısa süre "no active book" metnini gösterebilir -> UI'da yükleniyor durumu eklenebilir.
 - Üst bar ve Home'daki seri değeri artık VM'den geliyor; `userPreferences.currentStreak` çağıran başka yer kalmadı (derleme ile doğrulandı).
+## Devir — 2026-10-06 gece (buradan devam)
+
+- `kmp` dalı @ 3506391: Faz A + B1 (tasarım sistemi) + B2 (Ana ekran + gezinme) + B3 (Dağ ekranı) ortak modülde; Android derleniyor, testler/lint yeşil, emülatörde doğrulandı.
+- **Sıradaki adım: B4 – Profil ekranı → shared commonMain.** Engeller (B3 raporu): ProfileScreen `ReadingTimerService.state` → `LocalReadingTimer`; Android `R.string` (profile, relic_showcase, no_relics_yet, books_completed, total_pages_read) → composeResources; `SensorUtils`/`rememberTiltState` → shared `TiltSensor` (NaN koruması + ±45° sınır + 0.5° eşik korunmalı); `Locale`/`String.format`, `java.time`, `AndroidAppContainer` kullanımı. Gezinme kabuğundaki `profileContent` yuvası kaldırılacak; iOS giriş noktası `MainViewController()` eklenecek.
+- **Sonra Faz C:** iosApp (SwiftUI kabuk + ComposeUIViewController), framework export, GitHub Actions macOS iş akışı (iOS 27 SDK, imzasız .ipa → Sideloadly/AltStore).
+- GitHub: private https://github.com/efeeyyy/SummitRead (main + kmp). Worktree: `Desktop\Proje.B\Kitap-kmp`. Emülatör: Pixel_9a (medium_phone kullanma). Her emülatör testinden önce `run-as … tar c databases files` yedeği alınıyor.
