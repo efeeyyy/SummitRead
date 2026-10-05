@@ -109,3 +109,14 @@ Tüm UI (`ui/*`, `theme/*`, `Navigation.kt`, `MainActivity`), `ReadingTimerServi
 - **Zaman dilimi/DST:** `kotlinx-datetime` ile `java.time` davranışı testlerle (İstanbul, New York DST) aynı çıktı verdi; Android minSdk 24 için `java.time` hâlâ core-library desugaring ile geliyor (`app` modülünde açık).
 - **Tilt işaretleri (iOS)** ve iOS zamanlayıcının uygulama öldürülünce kaybı bilinen açık noktalar.
 - `compileSdk 36` ile `kotlin.multiplatform.library` eklentisi `android {}` bloğunu kullanıyor (eski `androidLibrary {}` AGP 9.4'te kullanımdan kalktı).
+
+## 10. Aşama B ilerleme
+
+**B1 (2026-10-06) tamam: tasarım sistemi `shared/commonMain`'de.**
+- Taşındı: `theme/*` (Color, Type, Shape+Spacing, Motion+`AppHaptics`, Theme), `ui/components/*` (Glass, GlassTabBar, LargeTitleScaffold, Grouped, SegmentedControl, Buttons, AppSheet, AppAlertDialog, AppTextField, Cards, Progress, Menu, Modifiers). Paket adları aynı; `app` importları değişmedi. `ThemeContrastTest` commonTest'e geçti (junit yerine kotlin.test).
+- Artefaktlar: CMP 1.11.1 `foundation/animation/ui/runtime/ui-graphics/components-resources`, `compose.material3` (eklenti çözer), Haze 1.7.2 (KMP, değişmedi), ikonlar `org.jetbrains.compose.material:material-icons-extended:1.7.3` (androidx 1.7.8 iOS'u yayımlamıyor; JetBrains 1.7.3 son sürüm, android'de androidx'e yönlenir). Hepsi `shared`'de `api`.
+- Kaynaklar: `shared/src/commonMain/composeResources/font/inter_*.ttf` (+ `files/Inter-OFL.txt`), `Res` paketi `com.example.summitread.resources`. Bileşenler string kaynağı kullanmıyor; `app/res/values/strings.xml` ekranlar taşınana kadar `app`te kaldı.
+- Font davranışı: CMP'de `Font(Res.font…)` composable'dır; `AppType` stilleri artık `fontFamily` taşımaz, Inter `SummitReadTheme` içindeki Material tipografisiyle `LocalTextStyle`'dan miras gelir. `BasicTextField` kullanan yerler (AppTextField, PageInputCard) `LocalTextStyle.current.fontFamily` alır.
+- Önizlemeler (`@Preview`) `app/.../ui/components/ComponentPreviews.kt`'e taşındı (`AlertContent`, `SheetGrabber` bunun için public).
+- Doğrulama: `:app:assembleDebug :app:testDebugUnitTest :shared:testAndroidHostTest :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :app:lintDebug` yeşil, lint 0 hata / 31 uyarı; shared 66 test. Emülatörde (Pixel_9a) çökme yok, kitaplık/tab bar/Inter görünüyor.
+- B2 için engeller: ekranlardaki `R.string/R.drawable`, `LocalContext`, `Calendar`, `java.time`, `PickVisualMedia`, `android.graphics` (bkz. §7 madde 3); Navigation (`navigation-compose` 2.9 + serialization) ve Coil 3 `shared`'e eklenmeli.
