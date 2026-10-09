@@ -16,9 +16,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.example.summitread.data.ThemeMode
 import com.example.summitread.platform.AndroidAppContainer
+import com.example.summitread.platform.AndroidTiltSensor
 import com.example.summitread.theme.AccentColor
 import com.example.summitread.theme.SummitReadTheme
-import com.example.summitread.ui.profile.ProfileScreen
 import androidx.lifecycle.lifecycleScope
 import com.example.summitread.notifications.NotificationChannels
 import com.example.summitread.services.AndroidReadingTimer
@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
         val bookRepository = container.repository
         val userPreferences = container.preferences
         val readingTimer = AndroidReadingTimer(applicationContext)
+        val tiltSensor = AndroidTiltSensor(applicationContext)
 
         val requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
@@ -100,12 +101,7 @@ class MainActivity : ComponentActivity() {
                         userPreferences = userPreferences,
                         imageStorage = container.imageStorage,
                         readingTimer = readingTimer,
-                        profileContent = {
-                            ProfileScreen(
-                                bookRepository = bookRepository,
-                                userPreferences = userPreferences
-                            )
-                        }
+                        tiltSensor = tiltSensor
                     )
                 }
             }

@@ -61,4 +61,8 @@
     <string name="character_role">Role</string>
     <string name="character_description">Description</string>
     <string name="no_active_book">Select a book from the shelf to start climbing!</string>
+    <string name="relic_showcase">Relic Showcase</string>
+    <string name="no_relics_yet">No summits conquered yet! Start reading 📖</string>
+    <string name="books_completed">Books Completed</string>
+    <string name="total_pages_read">Total Pages Read</string>
 </resources>

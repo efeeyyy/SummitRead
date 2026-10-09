@@ -31,9 +31,7 @@ import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
 import com.example.summitread.ui.components.pressableScale
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.example.summitread.platform.rememberDateFormatter
 
 private const val MAX_TILT_DEGREES = 25f
 
@@ -53,7 +51,7 @@ private const val MAX_SHIMMER_SHIFT_FRACTION = 0.3f
 @Composable
 fun RelicCardNode(relic: RelicEntity, tilt: TiltState, onClick: () -> Unit) {
     val colors = AppTheme.colors
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val dateFormat = rememberDateFormatter("MMM d, yyyy")
     val cardShape = AppShapes.large
     // Black shadow is invisible on the true-black dark canvas, so dark mode uses a soft gold glow.
     val shadowColor = if (colors.isDark) colors.gold.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.45f)
@@ -153,7 +151,7 @@ fun RelicCardNode(relic: RelicEntity, tilt: TiltState, onClick: () -> Unit) {
                     modifier = Modifier.padding(top = AppSpacing.sm)
                 )
                 Text(
-                    text = dateFormat.format(Date(relic.dateEarned)),
+                    text = dateFormat.format(relic.dateEarned),
                     style = AppType.Caption1,
                     color = colors.secondaryLabel,
                     modifier = Modifier.padding(top = 2.dp)

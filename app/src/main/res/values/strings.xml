@@ -1,8 +1,3 @@
 <resources>
     <string name="app_name">SummitRead</string>
-    <string name="profile">Profile</string>
-    <string name="relic_showcase">Relic Showcase</string>
-    <string name="no_relics_yet">No summits conquered yet! Start reading 📖</string>
-    <string name="books_completed">Books Completed</string>
-    <string name="total_pages_read">Total Pages Read</string>
 </resources>

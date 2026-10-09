@@ -81,9 +81,9 @@ Rota `bookId` taşır; zamanlayıcı kitaba bağlı, tek global sayaç; ClimbTim
 - Oturum günleri sistem saat diliminde saklı başlangıç ms'i; saat dilimi değişirse bir günlük kayma mümkün (kabul edildi).
 - `MountainViewModel.activeBook` ilk karede `null` (Room yüklenene kadar); ekran bu kısa süre "no active book" metnini gösterebilir -> UI'da yükleniyor durumu eklenebilir.
 - Üst bar ve Home'daki seri değeri artık VM'den geliyor; `userPreferences.currentStreak` çağıran başka yer kalmadı (derleme ile doğrulandı).
-## Devir — 2026-10-06 gece (buradan devam)
+## Devir — 2026-10-09 (buradan devam)
 
-- `kmp` dalı @ 3506391: Faz A + B1 (tasarım sistemi) + B2 (Ana ekran + gezinme) + B3 (Dağ ekranı) ortak modülde; Android derleniyor, testler/lint yeşil, emülatörde doğrulandı.
-- **Sıradaki adım: B4 – Profil ekranı → shared commonMain.** Engeller (B3 raporu): ProfileScreen `ReadingTimerService.state` → `LocalReadingTimer`; Android `R.string` (profile, relic_showcase, no_relics_yet, books_completed, total_pages_read) → composeResources; `SensorUtils`/`rememberTiltState` → shared `TiltSensor` (NaN koruması + ±45° sınır + 0.5° eşik korunmalı); `Locale`/`String.format`, `java.time`, `AndroidAppContainer` kullanımı. Gezinme kabuğundaki `profileContent` yuvası kaldırılacak; iOS giriş noktası `MainViewController()` eklenecek.
-- **Sonra Faz C:** iosApp (SwiftUI kabuk + ComposeUIViewController), framework export, GitHub Actions macOS iş akışı (iOS 27 SDK, imzasız .ipa → Sideloadly/AltStore).
-- GitHub: private https://github.com/efeeyyy/SummitRead (main + kmp). Worktree: `Desktop\Proje.B\Kitap-kmp`. Emülatör: Pixel_9a (medium_phone kullanma). Her emülatör testinden önce `run-as … tar c databases files` yedeği alınıyor.
+- `kmp` dalı: Faz A + B1 (tasarım sistemi) + B2 (Ana ekran + gezinme) + B3 (Dağ) + **B4 (Profil)** ortak modülde; `app` artık yalnız MainActivity, servis, worker, bildirim ve Android sensör/zamanlayıcı köprüleri. Android derleniyor, testler/lint yeşil (lint 0 hata / 26 uyarı), iOS klib derlemeleri (`compileKotlinIosSimulatorArm64/Arm64`, `compileTestKotlinIosSimulatorArm64`) yeşil.
+- **Bekleyen: B4 emülatör doğrulaması** (Pixel_9a, önce `run-as … tar c databases files` yedeği): Profil açılıyor mu, relic kartı eğilme paralaksı (sensör), yıllık hedef sheet'i, Journey sheet, tarih biçimleri, Library↔Profile geçişi, FATAL yok. Başarısız olursa nedeni B4 commit'inde ara.
+- **Sonra Faz C:** `iosApp/` (SwiftUI kabuk + `MainViewController()`), framework linklemesi (Mac/CI), GitHub Actions macOS iş akışı (iOS 27 SDK, imzasız .ipa → Sideloadly/AltStore). iOS'ta bağlanmayanlar: hatırlatıcı gözlemi + bildirim izni, `UNUserNotificationCenterDelegate`, durum çubuğu stili, sayaç durumunun kalıcılığı, tilt işaretleri doğrulaması (bkz. `MainViewController.kt` TODO).
+- GitHub: private https://github.com/efeeyyy/SummitRead (main + kmp). Worktree: `Desktop\Proje.B\Kitap-kmp`. Emülatör: Pixel_9a (medium_phone kullanma).

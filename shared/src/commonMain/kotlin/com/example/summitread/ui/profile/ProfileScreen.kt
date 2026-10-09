@@ -32,18 +32,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.res.stringResource
 import com.example.summitread.theme.tabularNumbers
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.summitread.R
 import com.example.summitread.data.BookRepository
 import com.example.summitread.data.UserPreferences
-import com.example.summitread.services.ReadingTimerService
+import com.example.summitread.platform.LocalReadingTimer
 import com.example.summitread.platform.TimerStatus
+import com.example.summitread.resources.Res
+import com.example.summitread.resources.books_completed
+import com.example.summitread.resources.no_relics_yet
+import com.example.summitread.resources.profile
+import com.example.summitread.resources.relic_showcase
+import com.example.summitread.resources.total_pages_read
+import kotlin.time.Clock
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.compose.resources.stringResource
 import com.example.summitread.theme.AppSpacing
 import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
@@ -57,7 +67,6 @@ import com.example.summitread.ui.components.LargeTitleScaffold
 import com.example.summitread.ui.components.LocalBottomBarHeight
 import com.example.summitread.ui.components.ProgressRing
 import com.example.summitread.ui.components.StatTile
-import java.util.Calendar
 
 @Composable
 fun ProfileScreen(
@@ -86,8 +95,11 @@ fun ProfileScreen(
     val journeyNotes by viewModel.journeyNotes.collectAsStateWithLifecycle()
     val journeyBook by viewModel.journeyBook.collectAsStateWithLifecycle()
     val journeyTotalTimeMillis by viewModel.journeyTotalTimeMillis.collectAsStateWithLifecycle()
-    val timerState by ReadingTimerService.state.collectAsStateWithLifecycle()
-    val isTimerRunning = timerState.status == TimerStatus.RUNNING
+    val readingTimer = LocalReadingTimer.current
+    // Only flips when the timer starts/stops running, so the screen does not recompose every second.
+    val isTimerRunning by remember(readingTimer) {
+        readingTimer.state.map { it.status == TimerStatus.RUNNING }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
 
     var showTimeExplanationDialog by rememberSaveable { mutableStateOf(false) }
     var showGoalSheet by rememberSaveable { mutableStateOf(false) }
@@ -96,10 +108,10 @@ fun ProfileScreen(
     val tilt = rememberTiltState()
     val haptics = rememberAppHaptics()
     val bottomBar = LocalBottomBarHeight.current
-    val year = remember { Calendar.getInstance().get(Calendar.YEAR) }
+    val year = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year }
 
     LargeTitleScaffold(
-        title = stringResource(R.string.profile),
+        title = stringResource(Res.string.profile),
         modifier = modifier
     ) { padding ->
         // Single LazyColumn (#43): relic cards are chunked into rows via items(), nothing scrolls inside it.
@@ -130,14 +142,14 @@ fun ProfileScreen(
                         StatRow {
                             StatTile(
                                 value = completedBooksCount.toString(),
-                                label = stringResource(R.string.books_completed),
+                                label = stringResource(Res.string.books_completed),
                                 icon = Icons.AutoMirrored.Rounded.MenuBook,
                                 iconTint = AppTheme.colors.gold,
                                 modifier = Modifier.weight(1f).fillMaxHeight()
                             )
                             StatTile(
                                 value = totalPagesRead.toString(),
-                                label = stringResource(R.string.total_pages_read),
+                                label = stringResource(Res.string.total_pages_read),
                                 icon = Icons.Rounded.AutoStories,
                                 modifier = Modifier.weight(1f).fillMaxHeight()
                             )
@@ -192,7 +204,7 @@ fun ProfileScreen(
 
             item(key = "relic_header") {
                 SectionTitle(
-                    text = stringResource(R.string.relic_showcase),
+                    text = stringResource(Res.string.relic_showcase),
                     modifier = Modifier.padding(start = AppSpacing.xs)
                 )
             }
@@ -202,7 +214,7 @@ fun ProfileScreen(
                     CardContainer(modifier = Modifier.fillMaxWidth()) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             Text(
-                                text = stringResource(R.string.no_relics_yet),
+                                text = stringResource(Res.string.no_relics_yet),
                                 style = AppType.Subheadline,
                                 textAlign = TextAlign.Center,
                                 color = AppTheme.colors.secondaryLabel,

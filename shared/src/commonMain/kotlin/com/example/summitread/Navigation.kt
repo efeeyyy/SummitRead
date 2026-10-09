@@ -37,7 +37,9 @@ import com.example.summitread.data.BookRepository
 import com.example.summitread.data.ImageStorage
 import com.example.summitread.data.UserPreferences
 import com.example.summitread.platform.LocalReadingTimer
+import com.example.summitread.platform.LocalTiltSensor
 import com.example.summitread.platform.ReadingTimer
+import com.example.summitread.platform.TiltSensor
 import com.example.summitread.theme.AppMotion
 import com.example.summitread.ui.components.GlassTabBar
 import com.example.summitread.ui.components.GlassTabItem
@@ -46,6 +48,7 @@ import com.example.summitread.ui.components.glassSource
 import com.example.summitread.ui.components.rememberGlassState
 import com.example.summitread.ui.home.HomeScreen
 import com.example.summitread.ui.mountain.MountainScreen
+import com.example.summitread.ui.profile.ProfileScreen
 import com.example.summitread.resources.Res
 import com.example.summitread.resources.library
 import com.example.summitread.resources.profile
@@ -57,8 +60,9 @@ private val TabRoutes: List<Any> = listOf(HomeRoute, ProfileRoute)
 /**
  * The app shell: Home + Mountain + Profile in a [NavHost] with the floating glass tab bar. The shell owns the
  * shared-element scopes (the cover morphs into the mountain) and the focus-mode flag (which hides the tab bar).
- * Profile is injected as a slot until it moves to commonMain (KMP phase B step 4). [readingTimer] is the platform
- * timer (Android foreground service / iOS in-app timer), exposed to the screens through [LocalReadingTimer].
+ * [readingTimer] is the platform
+ * timer (Android foreground service / iOS in-app timer), exposed to the screens through [LocalReadingTimer];
+ * [tiltSensor] is the platform tilt source for the profile relic parallax ([LocalTiltSensor]).
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -67,7 +71,7 @@ fun SummitReadApp(
     userPreferences: UserPreferences,
     imageStorage: ImageStorage,
     readingTimer: ReadingTimer,
-    profileContent: @Composable () -> Unit
+    tiltSensor: TiltSensor
 ) {
     val navController = rememberNavController()
     // Set by the Mountain screen; only honoured while that screen is the current destination, so a leftover
@@ -102,7 +106,8 @@ fun SummitReadApp(
     Box(Modifier.fillMaxSize()) {
         CompositionLocalProvider(
             LocalBottomBarHeight provides barHeight,
-            LocalReadingTimer provides readingTimer
+            LocalReadingTimer provides readingTimer,
+            LocalTiltSensor provides tiltSensor
         ) {
             SharedTransitionLayout(Modifier.fillMaxSize().glassSource(glass)) {
                 NavHost(
@@ -137,7 +142,10 @@ fun SummitReadApp(
                         )
                     }
                     composable<ProfileRoute> {
-                        profileContent()
+                        ProfileScreen(
+                            bookRepository = bookRepository,
+                            userPreferences = userPreferences
+                        )
                     }
                 }
             }

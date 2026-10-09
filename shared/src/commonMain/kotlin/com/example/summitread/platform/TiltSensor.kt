@@ -1,5 +1,7 @@
 package com.example.summitread.platform
 
+import androidx.compose.runtime.staticCompositionLocalOf
+
 /**
  * Device tilt source for the profile relic parallax.
  *
@@ -33,4 +35,9 @@ object TiltFilter {
         if (!pitch.isFinite() || !roll.isFinite()) return null
         return pitch.coerceIn(-MAX_TILT_DEGREES, MAX_TILT_DEGREES) to roll.coerceIn(-MAX_TILT_DEGREES, MAX_TILT_DEGREES)
     }
+}
+
+/** The platform tilt sensor, provided by the host (`SummitReadApp`). Used by the profile relic parallax. */
+val LocalTiltSensor = staticCompositionLocalOf<TiltSensor> {
+    error("No TiltSensor provided: wrap the UI in SummitReadApp")
 }

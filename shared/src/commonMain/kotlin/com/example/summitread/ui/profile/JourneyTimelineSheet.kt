@@ -36,9 +36,8 @@ import com.example.summitread.theme.AppTheme
 import com.example.summitread.theme.AppType
 import com.example.summitread.ui.components.AppSheet
 import com.example.summitread.ui.components.CardContainer
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.example.summitread.platform.DateFormatter
+import com.example.summitread.platform.rememberDateFormatter
 
 /**
  * Book Journey (#40/#41): book facts, completion date, total time, Summit Logbook review and
@@ -55,7 +54,7 @@ fun JourneyTimelineSheet(
     modifier: Modifier = Modifier
 ) {
     val colors = AppTheme.colors
-    val dateFormat = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val dateFormat = rememberDateFormatter("MMM d, yyyy")
     val sortedSessions = remember(sessions) { ProfileLogic.sortedSessions(sessions) }
     val grouped = remember(sessions, notes) { ProfileLogic.groupNotes(sessions, notes) }
     val notesBySession = grouped.first
@@ -87,7 +86,7 @@ fun JourneyTimelineSheet(
                     }
                     Spacer(Modifier.height(AppSpacing.sm))
                     Text(
-                        text = "Summit reached ${dateFormat.format(Date(completedAt))}",
+                        text = "Summit reached ${dateFormat.format(completedAt)}",
                         style = AppType.Subheadline,
                         color = colors.gold
                     )
@@ -196,7 +195,7 @@ private fun NoteLine(note: NoteEntity, modifier: Modifier = Modifier) {
 private fun TimelineItem(
     session: ReadingSessionEntity,
     notes: List<NoteEntity>,
-    dateFormat: SimpleDateFormat,
+    dateFormat: DateFormatter,
     isFirst: Boolean,
     isLast: Boolean,
     summit: Boolean
@@ -231,7 +230,7 @@ private fun TimelineItem(
                 shape = AppShapes.medium
             ) {
                 Text(
-                    text = dateFormat.format(Date(session.date)),
+                    text = dateFormat.format(session.date),
                     style = AppType.Footnote,
                     color = if (summit) colors.gold else colors.secondaryLabel
                 )
